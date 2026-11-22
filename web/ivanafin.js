@@ -5743,9 +5743,11 @@ window.IvfWebLoaded = true;
 // 1. Soundtrack: browsers and the Samsung TV can't play DTS or TrueHD, so the server converts the sound
 //    on the fly (slower start, slower skipping). When a file also has an English track the TV can play
 //    (AC3 / E-AC3 / AAC...), that one is asked for instead. A track picked by hand in the player is kept.
-// 2. Image subtitles (PGS, Blu-ray style): drawn by the app itself instead of the server burning them
-//    into the picture (a full 4K re-encode). Jellyfin's own "Render PGS subtitles" setting, turned on
-//    once per device; it can still be turned off in Settings > Subtitles.
+// 2. Image subtitles (PGS, Blu-ray style): back to Jellyfin's default = the server burns them into the
+//    picture, so they show at once (2026-11-22, user). Drawing them in the app (Jellyfin's "Render PGS
+//    subtitles", which IvanaFin turned on 2026-11-14) made the first use of a big film wait minutes while
+//    the server pulled the subtitles out of the whole file. Our earlier 'true' is undone once per device;
+//    the setting can still be turned on by hand in Settings > Subtitles.
 // 3. Paused = the player buttons and the progress bar stay on screen (2026-11-17, user). Jellyfin fades
 //    them out after a few seconds even when paused; while the video is paused the hiding is undone.
 // 4. The film or show logo at the top of the player instead of the typed title (2026-11-17, user: like the
@@ -5755,7 +5757,12 @@ window.IvfWebLoaded = true;
   if (window.__ivfPlaybackTweaks) return;
   window.__ivfPlaybackTweaks = true;
 
-  try { if (localStorage.getItem('subtitlerenderpgs') === null) localStorage.setItem('subtitlerenderpgs', 'true'); } catch (e) {}
+  try {
+    if (localStorage.getItem('ivf-pgs-burnin') === null) {
+      localStorage.removeItem('subtitlerenderpgs');
+      localStorage.setItem('ivf-pgs-burnin', '1');
+    }
+  } catch (e) {}
 
   var UNPLAYABLE = { dts: 1, truehd: 1, mlp: 1 };
   // given: the track the app asked for (it always names one - the default); only that default is replaced
