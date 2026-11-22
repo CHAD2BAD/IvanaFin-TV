@@ -21,7 +21,7 @@
     });
     window.addEventListener('popstate', function () { try { window.dispatchEvent(new Event('ivf-nav')); } catch (e) {} });
   }
-  var TV = typeof tizen !== 'undefined';
+  var TV = (typeof tizen !== 'undefined' || !!window.PalmSystem);
   var STYLE_ID = 'ivf-slib-style';
 
   var COLS = TV ? 5 : 7; // web: smaller posters, 7 per row (same ~72% density as its other pages)

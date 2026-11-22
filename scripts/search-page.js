@@ -10,7 +10,7 @@
   'use strict';
   // Samsung and the web (the web keeps Jellyfin's top bar - its search icon opens this - sits below
   // it and is drawn at ~72% size like the web Discover page; the mouse selects by hovering)
-  var TV = typeof tizen !== 'undefined';
+  var TV = (typeof tizen !== 'undefined' || !!window.PalmSystem);
   var DF = TV ? 1 : 0.72;
   var ROOT_ID = 'ivf-search', STYLE_ID = 'ivf-search-style', TYPES_KEY = 'ivf-search-types';
   var KINDS = [
@@ -234,7 +234,7 @@
   window.addEventListener('keydown', function (e) {
     if (!root || root.classList.contains('ivf-off')) return;
     var k = e.key || '', kc = e.keyCode;
-    var back = k === 'Escape' || k === 'GoBack' || k === 'BrowserBack' || kc === 10009 || kc === 27;
+    var back = k === 'Escape' || k === 'GoBack' || k === 'BrowserBack' || (kc === 10009 || kc === 461) || kc === 27;
     var dir = k === 'ArrowLeft' || kc === 37 ? 'l' : k === 'ArrowRight' || kc === 39 ? 'r' : k === 'ArrowUp' || kc === 38 ? 'u' : k === 'ArrowDown' || kc === 40 ? 'd' : '';
     if (dialog) {
       if (back) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); closeFilter(); return; }

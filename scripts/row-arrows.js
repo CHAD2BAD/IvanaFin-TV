@@ -5,7 +5,7 @@
 // scroll the row by most of its width.
 (function () {
   'use strict';
-  if (typeof tizen !== 'undefined') return; // TV: the remote scrolls the rows
+  if ((typeof tizen !== 'undefined' || !!window.PalmSystem)) return; // TV: the remote scrolls the rows
   var STRIPS = '#ivf-music .strip, .ivf-dsc-strip, #ivf-movie .ivf-mv-strip, #ivf-show .ivf-tvs-strip';
   // the card pictures: the arrows sit on their middle (not the middle of picture + title + year below)
   var PICS = '.ivf-dsc-poster, .p, .pic, .ivf-mv-face, .ivf-tvs-face';

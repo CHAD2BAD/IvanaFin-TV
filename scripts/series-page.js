@@ -23,7 +23,7 @@
     });
     window.addEventListener('popstate', function () { try { window.dispatchEvent(new Event('ivf-nav')); } catch (e) {} });
   }
-  var TV = typeof tizen !== 'undefined';
+  var TV = (typeof tizen !== 'undefined' || !!window.PalmSystem);
   var DF = TV ? 1 : 0.72; // Cast & Crew uses the film page's (web: denser) sizes
   var STYLE_ID = 'ivf-series-style';
   var ROOT_ID = 'ivf-show';
@@ -346,7 +346,7 @@
     }
     function onKey(e) {
       var k = e.key || '';
-      if (k === 'Escape' || k === 'Backspace' || k === 'GoBack' || k === 'BrowserBack' || e.keyCode === 10009 || e.keyCode === 27 || e.keyCode === 8) {
+      if (k === 'Escape' || k === 'Backspace' || k === 'GoBack' || k === 'BrowserBack' || (e.keyCode === 10009 || e.keyCode === 461) || e.keyCode === 27 || e.keyCode === 8) {
         e.preventDefault(); e.stopPropagation(); if (e.stopImmediatePropagation) e.stopImmediatePropagation();
         close();
       } else if (k === 'ArrowDown' || k === 'ArrowUp' || e.keyCode === 40 || e.keyCode === 38) {
@@ -779,7 +779,7 @@
     if (!shownId || !state || !root || root.classList.contains('ivf-off') || document.querySelector('.ivf-dialog')) return;
     if (window.IvfSwCard && window.IvfSwCard.isOpen()) return; // sw-card.js has the keys
     var k = e.key || '', kc = e.keyCode;
-    var back = k === 'Escape' || k === 'Backspace' || k === 'GoBack' || k === 'BrowserBack' || kc === 10009 || kc === 27 || kc === 8;
+    var back = k === 'Escape' || k === 'Backspace' || k === 'GoBack' || k === 'BrowserBack' || (kc === 10009 || kc === 461) || kc === 27 || kc === 8;
     // web: Esc / Backspace leave the show page (not while typing or while a Jellyfin dialog is open)
     if (!TV && back && !document.querySelector('.dialogContainer .dialog')) {
       var tg = document.activeElement && document.activeElement.tagName;

@@ -33,7 +33,7 @@ foreach ($f in Get-ChildItem $ScriptsDir -Filter *.js | Sort-Object Name) {
 [IO.File]::WriteAllText((Join-Path $stage 'www\ivanafin.js'), $sb.ToString(), (New-Object Text.UTF8Encoding $false))
 
 # 3) Same index.html changes as the official jellyfin-tizen build, + the IvanaFin scripts after Jellyfin
-$csp = '<meta http-equiv="Content-Security-Policy" content="default-src * ''self'' ''unsafe-inline'' ''unsafe-eval'' data: gap: file: filesystem: ws: wss:;">'
+$csp = '<meta http-equiv="Content-Security-Policy" content="default-src * ''self'' ''unsafe-inline'' ''unsafe-eval'' data: blob: gap: file: filesystem: ws: wss:;">'
 $html = $html.Replace('</head>', "$csp</head>")
 $m = [regex]::Match($html, '<script defer="defer" src="main\.jellyfin\.bundle\.js[^"]*"></script>')
 if (-not $m.Success) { throw 'main.jellyfin.bundle.js script tag not found' }

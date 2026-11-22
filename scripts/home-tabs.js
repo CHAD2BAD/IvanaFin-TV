@@ -13,7 +13,7 @@
   // Search button at the top centre - Jellyfin's search page shows Seerr results to request too. Back
   // from that search returns to Discover (home-grid.js reads the ivf-return-discover flag).
   // A selected Discover film gets the white outline (its picture takes the focus, not the card).
-  var TV = typeof tizen !== 'undefined';
+  var TV = (typeof tizen !== 'undefined' || !!window.PalmSystem);
   var css = document.createElement('style');
   css.textContent =
     // the title row only holds the Search button now: logo and text hidden, no sticky, little space

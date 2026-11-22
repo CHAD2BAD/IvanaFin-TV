@@ -16,7 +16,7 @@
 // Now Playing -> page -> previous page -> Music Home -> out of Music.
 (function () {
   'use strict';
-  var TV = typeof tizen !== 'undefined';
+  var TV = (typeof tizen !== 'undefined' || !!window.PalmSystem);
   var DF = TV ? 1 : 0.72;
   var GREEN = 'var(--ma,#fa586a)'; // (name kept: the accent - taken from the page's picture, see palette())
   var BG = '#121212';
@@ -2241,7 +2241,7 @@
     var k = e.key || '', kc = e.keyCode, a = document.activeElement;
     var typing = a && a.tagName === 'INPUT';
     function stop() { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); }
-    var back2 = k === 'Escape' || k === 'GoBack' || k === 'BrowserBack' || kc === 10009 || kc === 27 || (TV && (k === 'Backspace' || kc === 8) && !typing);
+    var back2 = k === 'Escape' || k === 'GoBack' || k === 'BrowserBack' || (kc === 10009 || kc === 461) || kc === 27 || (TV && (k === 'Backspace' || kc === 8) && !typing);
     if (back2) {
       if (typing && !TV) return;
       if (closeSortMenu(true)) { stop(); return; }

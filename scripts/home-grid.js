@@ -24,7 +24,7 @@
   }
   // Samsung app = no web header, our own Search/Settings pills. Jellyfin web in a browser keeps the full
   // header (menu, search, cast, user menu, Home/Discover tabs) and the grid sits just below it.
-  var TV = typeof tizen !== 'undefined';
+  var TV = (typeof tizen !== 'undefined' || !!window.PalmSystem);
 
   var STYLE_ID = 'ivf-shome-style';
   var LAST_KEY = 'ivf-shome-last';     // index of the last opened tile (sessionStorage)
@@ -199,6 +199,11 @@
     setTimeout(function () { m.remove(); }, 4000);
   }
   function openGames() {
+    // LG webOS: Moonlight TV (mariotaku/moonlight-tv, app id com.limelight.webos) via the app's launcher
+    if (window.PalmSystem && window.IvfLaunchApp) {
+      window.IvfLaunchApp('com.limelight.webos', function () { gamesMessage('Games needs the Moonlight app on this TV'); });
+      return;
+    }
     if (typeof tizen === 'undefined' || !tizen.application) {
       gamesMessage('Games play on the TVs - open Games on the Fire TV or Samsung');
       return;
@@ -641,10 +646,10 @@
   // Remote: our own arrow-key movement on Home (the web's spatial navigation would wander behind it)
   window.addEventListener('keydown', function (e) {
     var k = e.key || '';
-    var back = k === 'Escape' || k === 'Backspace' || k === 'GoBack' || k === 'BrowserBack' || e.keyCode === 10009 || e.keyCode === 27 || e.keyCode === 8;
+    var back = k === 'Escape' || k === 'Backspace' || k === 'GoBack' || k === 'BrowserBack' || (e.keyCode === 10009 || e.keyCode === 461) || e.keyCode === 27 || e.keyCode === 8;
     // Back from Discover returns to our Home (not while typing in a search box on the web)
     var typing = e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName || '');
-    var remoteBack = e.keyCode === 10009 || k === 'GoBack' || k === 'BrowserBack';
+    var remoteBack = (e.keyCode === 10009 || e.keyCode === 461) || k === 'GoBack' || k === 'BrowserBack';
     if (back && (!typing || remoteBack) && mode === 'discover' && onHomeRoute() && !jeWindowOpen()) {
       e.preventDefault(); e.stopPropagation(); if (e.stopImmediatePropagation) e.stopImmediatePropagation();
       if (window.IvfDiscover && window.IvfDiscover.back()) return; // from the posters, Back goes to the tabs first
@@ -681,7 +686,7 @@
   // draws its own Home. If it turns out not to be Home after all, drop it again.
   window.addEventListener('keydown', function (e) {
     var k = e.key || '';
-    var back = k === 'Escape' || k === 'Backspace' || k === 'GoBack' || k === 'BrowserBack' || e.keyCode === 10009 || e.keyCode === 27 || e.keyCode === 8;
+    var back = k === 'Escape' || k === 'Backspace' || k === 'GoBack' || k === 'BrowserBack' || (e.keyCode === 10009 || e.keyCode === 461) || e.keyCode === 27 || e.keyCode === 8;
     if (!back || !root || !root.querySelector('.ivf-sh-tile')) return;
     if (!document.documentElement.classList.contains('ivf-lib-on')) return;
     setMode('home');
@@ -778,7 +783,7 @@
 // Samsung: Settings opened with the selection on the top bar's back arrow, which shows no highlight
 // (round-4 beta) - select the first settings row instead.
 (function () {
-  var TV = typeof tizen !== 'undefined' || localStorage.getItem('layout') === 'tv';
+  var TV = (typeof tizen !== 'undefined' || !!window.PalmSystem) || localStorage.getItem('layout') === 'tv';
   if (!TV) return;
   // round-5 beta: Back from a sub-page selected the first row (not the one opened), and after the
   // Jellyfin Enhanced dialog closed nothing was selected - the next Down landed on Sign Out.
@@ -823,7 +828,7 @@
     if ((k >= 37 && k <= 40 || k === 13) && lost()) { if (restore()) { e.preventDefault(); e.stopPropagation(); } return; }
     if (k === 13) { var a = document.activeElement; if (a && page() && page().contains(a) && rows(page()).indexOf(a) >= 0) sessionStorage.setItem(KEY, label(a)); }
     // Back closing a dialog: select the row again once it has gone
-    if (k === 27 || k === 8 || k === 10009) [250, 700].forEach(function (ms) { setTimeout(restore, ms); });
+    if (k === 27 || k === 8 || (k === 10009 || k === 461)) [250, 700].forEach(function (ms) { setTimeout(restore, ms); });
   }, true);
   // Settings > Home: a drop-down with nothing saved (TV mode home screen) showed an empty box - show
   // Jellyfin's default (its first choice) instead (round-5 beta)
@@ -882,7 +887,7 @@
 // - Samsung: the keyboard shortcuts mean nothing on a TV remote (round-5 beta) - that tab and the
 //   "Press ? or Esc to close" line are hidden and the panel opens on Playback Settings
 (function () {
-  var TV = typeof tizen !== 'undefined' || localStorage.getItem('layout') === 'tv';
+  var TV = (typeof tizen !== 'undefined' || !!window.PalmSystem) || localStorage.getItem('layout') === 'tv';
   var st = document.createElement('style');
   st.textContent =
     '#shortcuts-content .shortcuts-container div[style*="space-between"]{justify-content:flex-start !important;gap:18px !important}' +

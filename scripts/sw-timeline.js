@@ -7,7 +7,7 @@
 // The choice is remembered on this TV / browser. Android IvanaFin has the same button.
 (function () {
   'use strict';
-  var TV = typeof tizen !== 'undefined';
+  var TV = (typeof tizen !== 'undefined' || !!window.PalmSystem);
   var KEY = 'ivf-sw-sort';
   var STYLE_ID = 'ivf-swt-style';
   var libs = {}; // library id -> Promise of { itemId: { key, label } } (null: not a Star Wars library)

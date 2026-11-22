@@ -7,7 +7,7 @@
 //   film or show); Back / Esc / a click outside closes it. While it is open it takes every key first.
 (function () {
   'use strict';
-  var TV = typeof tizen !== 'undefined';
+  var TV = (typeof tizen !== 'undefined' || !!window.PalmSystem);
   var DF = TV ? 1 : 0.72;
   var KINDS = {
     planet: { facts: [['Region', 'region'], ['Climate', 'climate'], ['Terrain', 'terrain']], more: 'planets' },
@@ -126,7 +126,7 @@
   window.addEventListener('keydown', function (e) {
     if (!cur) return;
     var k = e.key || '', kc = e.keyCode;
-    var back = k === 'Escape' || k === 'Backspace' || k === 'GoBack' || k === 'BrowserBack' || kc === 10009 || kc === 27 || kc === 8;
+    var back = k === 'Escape' || k === 'Backspace' || k === 'GoBack' || k === 'BrowserBack' || (kc === 10009 || kc === 461) || kc === 27 || kc === 8;
     var dir = k === 'ArrowLeft' || kc === 37 ? 'l' : k === 'ArrowRight' || kc === 39 ? 'r' : k === 'ArrowUp' || kc === 38 ? 'u' : k === 'ArrowDown' || kc === 40 ? 'd' : '';
     if (!back && !dir) return; // OK / Enter reach the focused link (a button)
     e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();

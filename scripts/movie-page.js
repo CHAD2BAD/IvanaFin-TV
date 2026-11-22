@@ -34,7 +34,7 @@
   }
   // Samsung and the web (the web keeps Jellyfin's top bar, sits below it, and is drawn at ~72% size
   // like the web Discover page; the mouse selects by hovering and nothing is preselected)
-  var TV = typeof tizen !== 'undefined';
+  var TV = (typeof tizen !== 'undefined' || !!window.PalmSystem);
   var DF = TV ? 1 : 0.72;
   var STYLE_ID = 'ivf-movie-style';
   var ROOT_ID = 'ivf-movie';
@@ -729,7 +729,7 @@
     if (!root || root.classList.contains('ivf-off')) return;
     if (window.IvfSwCard && window.IvfSwCard.isOpen()) return; // sw-card.js has the keys
     var k = e.key || '', kc = e.keyCode;
-    var back = k === 'Escape' || k === 'Backspace' || k === 'GoBack' || k === 'BrowserBack' || kc === 10009 || kc === 27 || kc === 8;
+    var back = k === 'Escape' || k === 'Backspace' || k === 'GoBack' || k === 'BrowserBack' || (kc === 10009 || kc === 461) || kc === 27 || kc === 8;
     var dir = k === 'ArrowLeft' || kc === 37 ? 'l' : k === 'ArrowRight' || kc === 39 ? 'r' : k === 'ArrowUp' || kc === 38 ? 'u' : k === 'ArrowDown' || kc === 40 ? 'd' : '';
     if (dialogs.length) {
       var box = dialogs[dialogs.length - 1].el;

@@ -71,7 +71,7 @@ window.IvfWebLoaded = true;
 // with a finger still selects.
 (function () {
   'use strict';
-  if (typeof tizen !== 'undefined' || window.__ivfRightClick) return;
+  if ((typeof tizen !== 'undefined' || !!window.PalmSystem) || window.__ivfRightClick) return;
   window.__ivfRightClick = true;
   var lastPointer = 'mouse';
   window.addEventListener('pointerdown', function (e) { lastPointer = e.pointerType || 'mouse'; }, true);
@@ -108,7 +108,7 @@ window.IvfWebLoaded = true;
 // goes from the content to the tabs, then (home-grid.js) out of Discover.
 (function () {
   'use strict';
-  var TV = typeof tizen !== 'undefined';
+  var TV = (typeof tizen !== 'undefined' || !!window.PalmSystem);
   var IMG = 'https://image.tmdb.org/t/p/';
   var TABS = ['Discover', 'Search', 'Request', 'Movies', 'TV Shows'];
   var ROWS = [
@@ -1427,7 +1427,7 @@ window.IvfWebLoaded = true;
   }
   // Samsung app = no web header, our own Search/Settings pills. Jellyfin web in a browser keeps the full
   // header (menu, search, cast, user menu, Home/Discover tabs) and the grid sits just below it.
-  var TV = typeof tizen !== 'undefined';
+  var TV = (typeof tizen !== 'undefined' || !!window.PalmSystem);
 
   var STYLE_ID = 'ivf-shome-style';
   var LAST_KEY = 'ivf-shome-last';     // index of the last opened tile (sessionStorage)
@@ -1602,6 +1602,11 @@ window.IvfWebLoaded = true;
     setTimeout(function () { m.remove(); }, 4000);
   }
   function openGames() {
+    // LG webOS: Moonlight TV (mariotaku/moonlight-tv, app id com.limelight.webos) via the app's launcher
+    if (window.PalmSystem && window.IvfLaunchApp) {
+      window.IvfLaunchApp('com.limelight.webos', function () { gamesMessage('Games needs the Moonlight app on this TV'); });
+      return;
+    }
     if (typeof tizen === 'undefined' || !tizen.application) {
       gamesMessage('Games play on the TVs - open Games on the Fire TV or Samsung');
       return;
@@ -2044,10 +2049,10 @@ window.IvfWebLoaded = true;
   // Remote: our own arrow-key movement on Home (the web's spatial navigation would wander behind it)
   window.addEventListener('keydown', function (e) {
     var k = e.key || '';
-    var back = k === 'Escape' || k === 'Backspace' || k === 'GoBack' || k === 'BrowserBack' || e.keyCode === 10009 || e.keyCode === 27 || e.keyCode === 8;
+    var back = k === 'Escape' || k === 'Backspace' || k === 'GoBack' || k === 'BrowserBack' || (e.keyCode === 10009 || e.keyCode === 461) || e.keyCode === 27 || e.keyCode === 8;
     // Back from Discover returns to our Home (not while typing in a search box on the web)
     var typing = e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName || '');
-    var remoteBack = e.keyCode === 10009 || k === 'GoBack' || k === 'BrowserBack';
+    var remoteBack = (e.keyCode === 10009 || e.keyCode === 461) || k === 'GoBack' || k === 'BrowserBack';
     if (back && (!typing || remoteBack) && mode === 'discover' && onHomeRoute() && !jeWindowOpen()) {
       e.preventDefault(); e.stopPropagation(); if (e.stopImmediatePropagation) e.stopImmediatePropagation();
       if (window.IvfDiscover && window.IvfDiscover.back()) return; // from the posters, Back goes to the tabs first
@@ -2084,7 +2089,7 @@ window.IvfWebLoaded = true;
   // draws its own Home. If it turns out not to be Home after all, drop it again.
   window.addEventListener('keydown', function (e) {
     var k = e.key || '';
-    var back = k === 'Escape' || k === 'Backspace' || k === 'GoBack' || k === 'BrowserBack' || e.keyCode === 10009 || e.keyCode === 27 || e.keyCode === 8;
+    var back = k === 'Escape' || k === 'Backspace' || k === 'GoBack' || k === 'BrowserBack' || (e.keyCode === 10009 || e.keyCode === 461) || e.keyCode === 27 || e.keyCode === 8;
     if (!back || !root || !root.querySelector('.ivf-sh-tile')) return;
     if (!document.documentElement.classList.contains('ivf-lib-on')) return;
     setMode('home');
@@ -2181,7 +2186,7 @@ window.IvfWebLoaded = true;
 // Samsung: Settings opened with the selection on the top bar's back arrow, which shows no highlight
 // (round-4 beta) - select the first settings row instead.
 (function () {
-  var TV = typeof tizen !== 'undefined' || localStorage.getItem('layout') === 'tv';
+  var TV = (typeof tizen !== 'undefined' || !!window.PalmSystem) || localStorage.getItem('layout') === 'tv';
   if (!TV) return;
   // round-5 beta: Back from a sub-page selected the first row (not the one opened), and after the
   // Jellyfin Enhanced dialog closed nothing was selected - the next Down landed on Sign Out.
@@ -2226,7 +2231,7 @@ window.IvfWebLoaded = true;
     if ((k >= 37 && k <= 40 || k === 13) && lost()) { if (restore()) { e.preventDefault(); e.stopPropagation(); } return; }
     if (k === 13) { var a = document.activeElement; if (a && page() && page().contains(a) && rows(page()).indexOf(a) >= 0) sessionStorage.setItem(KEY, label(a)); }
     // Back closing a dialog: select the row again once it has gone
-    if (k === 27 || k === 8 || k === 10009) [250, 700].forEach(function (ms) { setTimeout(restore, ms); });
+    if (k === 27 || k === 8 || (k === 10009 || k === 461)) [250, 700].forEach(function (ms) { setTimeout(restore, ms); });
   }, true);
   // Settings > Home: a drop-down with nothing saved (TV mode home screen) showed an empty box - show
   // Jellyfin's default (its first choice) instead (round-5 beta)
@@ -2285,7 +2290,7 @@ window.IvfWebLoaded = true;
 // - Samsung: the keyboard shortcuts mean nothing on a TV remote (round-5 beta) - that tab and the
 //   "Press ? or Esc to close" line are hidden and the panel opens on Playback Settings
 (function () {
-  var TV = typeof tizen !== 'undefined' || localStorage.getItem('layout') === 'tv';
+  var TV = (typeof tizen !== 'undefined' || !!window.PalmSystem) || localStorage.getItem('layout') === 'tv';
   var st = document.createElement('style');
   st.textContent =
     '#shortcuts-content .shortcuts-container div[style*="space-between"]{justify-content:flex-start !important;gap:18px !important}' +
@@ -2358,7 +2363,7 @@ window.IvfWebLoaded = true;
   // Search button at the top centre - Jellyfin's search page shows Seerr results to request too. Back
   // from that search returns to Discover (home-grid.js reads the ivf-return-discover flag).
   // A selected Discover film gets the white outline (its picture takes the focus, not the card).
-  var TV = typeof tizen !== 'undefined';
+  var TV = (typeof tizen !== 'undefined' || !!window.PalmSystem);
   var css = document.createElement('style');
   css.textContent =
     // the title row only holds the Search button now: logo and text hidden, no sticky, little space
@@ -2675,7 +2680,7 @@ window.IvfWebLoaded = true;
   }
   // Samsung and the web (the web keeps Jellyfin's top bar, sits below it, and is drawn at ~72% size
   // like the web Discover page; the mouse selects by hovering and nothing is preselected)
-  var TV = typeof tizen !== 'undefined';
+  var TV = (typeof tizen !== 'undefined' || !!window.PalmSystem);
   var DF = TV ? 1 : 0.72;
   var STYLE_ID = 'ivf-movie-style';
   var ROOT_ID = 'ivf-movie';
@@ -3370,7 +3375,7 @@ window.IvfWebLoaded = true;
     if (!root || root.classList.contains('ivf-off')) return;
     if (window.IvfSwCard && window.IvfSwCard.isOpen()) return; // sw-card.js has the keys
     var k = e.key || '', kc = e.keyCode;
-    var back = k === 'Escape' || k === 'Backspace' || k === 'GoBack' || k === 'BrowserBack' || kc === 10009 || kc === 27 || kc === 8;
+    var back = k === 'Escape' || k === 'Backspace' || k === 'GoBack' || k === 'BrowserBack' || (kc === 10009 || kc === 461) || kc === 27 || kc === 8;
     var dir = k === 'ArrowLeft' || kc === 37 ? 'l' : k === 'ArrowRight' || kc === 39 ? 'r' : k === 'ArrowUp' || kc === 38 ? 'u' : k === 'ArrowDown' || kc === 40 ? 'd' : '';
     if (dialogs.length) {
       var box = dialogs[dialogs.length - 1].el;
@@ -3454,7 +3459,7 @@ window.IvfWebLoaded = true;
 // Now Playing -> page -> previous page -> Music Home -> out of Music.
 (function () {
   'use strict';
-  var TV = typeof tizen !== 'undefined';
+  var TV = (typeof tizen !== 'undefined' || !!window.PalmSystem);
   var DF = TV ? 1 : 0.72;
   var GREEN = 'var(--ma,#fa586a)'; // (name kept: the accent - taken from the page's picture, see palette())
   var BG = '#121212';
@@ -5679,7 +5684,7 @@ window.IvfWebLoaded = true;
     var k = e.key || '', kc = e.keyCode, a = document.activeElement;
     var typing = a && a.tagName === 'INPUT';
     function stop() { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); }
-    var back2 = k === 'Escape' || k === 'GoBack' || k === 'BrowserBack' || kc === 10009 || kc === 27 || (TV && (k === 'Backspace' || kc === 8) && !typing);
+    var back2 = k === 'Escape' || k === 'GoBack' || k === 'BrowserBack' || (kc === 10009 || kc === 461) || kc === 27 || (TV && (k === 'Backspace' || kc === 8) && !typing);
     if (back2) {
       if (typing && !TV) return;
       if (closeSortMenu(true)) { stop(); return; }
@@ -5966,7 +5971,7 @@ window.IvfWebLoaded = true;
 // scroll the row by most of its width.
 (function () {
   'use strict';
-  if (typeof tizen !== 'undefined') return; // TV: the remote scrolls the rows
+  if ((typeof tizen !== 'undefined' || !!window.PalmSystem)) return; // TV: the remote scrolls the rows
   var STRIPS = '#ivf-music .strip, .ivf-dsc-strip, #ivf-movie .ivf-mv-strip, #ivf-show .ivf-tvs-strip';
   // the card pictures: the arrows sit on their middle (not the middle of picture + title + year below)
   var PICS = '.ivf-dsc-poster, .p, .pic, .ivf-mv-face, .ivf-tvs-face';
@@ -6068,7 +6073,7 @@ window.IvfWebLoaded = true;
     });
     window.addEventListener('popstate', function () { try { window.dispatchEvent(new Event('ivf-nav')); } catch (e) {} });
   }
-  var TV = typeof tizen !== 'undefined';
+  var TV = (typeof tizen !== 'undefined' || !!window.PalmSystem);
   var STYLE_ID = 'ivf-slib-style';
 
   var COLS = TV ? 5 : 7; // web: smaller posters, 7 per row (same ~72% density as its other pages)
@@ -6383,7 +6388,7 @@ window.IvfWebLoaded = true;
   'use strict';
   // Samsung and the web (the web keeps Jellyfin's top bar - its search icon opens this - sits below
   // it and is drawn at ~72% size like the web Discover page; the mouse selects by hovering)
-  var TV = typeof tizen !== 'undefined';
+  var TV = (typeof tizen !== 'undefined' || !!window.PalmSystem);
   var DF = TV ? 1 : 0.72;
   var ROOT_ID = 'ivf-search', STYLE_ID = 'ivf-search-style', TYPES_KEY = 'ivf-search-types';
   var KINDS = [
@@ -6607,7 +6612,7 @@ window.IvfWebLoaded = true;
   window.addEventListener('keydown', function (e) {
     if (!root || root.classList.contains('ivf-off')) return;
     var k = e.key || '', kc = e.keyCode;
-    var back = k === 'Escape' || k === 'GoBack' || k === 'BrowserBack' || kc === 10009 || kc === 27;
+    var back = k === 'Escape' || k === 'GoBack' || k === 'BrowserBack' || (kc === 10009 || kc === 461) || kc === 27;
     var dir = k === 'ArrowLeft' || kc === 37 ? 'l' : k === 'ArrowRight' || kc === 39 ? 'r' : k === 'ArrowUp' || kc === 38 ? 'u' : k === 'ArrowDown' || kc === 40 ? 'd' : '';
     if (dialog) {
       if (back) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); closeFilter(); return; }
@@ -6703,7 +6708,7 @@ window.IvfWebLoaded = true;
     });
     window.addEventListener('popstate', function () { try { window.dispatchEvent(new Event('ivf-nav')); } catch (e) {} });
   }
-  var TV = typeof tizen !== 'undefined';
+  var TV = (typeof tizen !== 'undefined' || !!window.PalmSystem);
   var DF = TV ? 1 : 0.72; // Cast & Crew uses the film page's (web: denser) sizes
   var STYLE_ID = 'ivf-series-style';
   var ROOT_ID = 'ivf-show';
@@ -7026,7 +7031,7 @@ window.IvfWebLoaded = true;
     }
     function onKey(e) {
       var k = e.key || '';
-      if (k === 'Escape' || k === 'Backspace' || k === 'GoBack' || k === 'BrowserBack' || e.keyCode === 10009 || e.keyCode === 27 || e.keyCode === 8) {
+      if (k === 'Escape' || k === 'Backspace' || k === 'GoBack' || k === 'BrowserBack' || (e.keyCode === 10009 || e.keyCode === 461) || e.keyCode === 27 || e.keyCode === 8) {
         e.preventDefault(); e.stopPropagation(); if (e.stopImmediatePropagation) e.stopImmediatePropagation();
         close();
       } else if (k === 'ArrowDown' || k === 'ArrowUp' || e.keyCode === 40 || e.keyCode === 38) {
@@ -7459,7 +7464,7 @@ window.IvfWebLoaded = true;
     if (!shownId || !state || !root || root.classList.contains('ivf-off') || document.querySelector('.ivf-dialog')) return;
     if (window.IvfSwCard && window.IvfSwCard.isOpen()) return; // sw-card.js has the keys
     var k = e.key || '', kc = e.keyCode;
-    var back = k === 'Escape' || k === 'Backspace' || k === 'GoBack' || k === 'BrowserBack' || kc === 10009 || kc === 27 || kc === 8;
+    var back = k === 'Escape' || k === 'Backspace' || k === 'GoBack' || k === 'BrowserBack' || (kc === 10009 || kc === 461) || kc === 27 || kc === 8;
     // web: Esc / Backspace leave the show page (not while typing or while a Jellyfin dialog is open)
     if (!TV && back && !document.querySelector('.dialogContainer .dialog')) {
       var tg = document.activeElement && document.activeElement.tagName;
@@ -7578,7 +7583,7 @@ window.IvfWebLoaded = true;
 //   film or show); Back / Esc / a click outside closes it. While it is open it takes every key first.
 (function () {
   'use strict';
-  var TV = typeof tizen !== 'undefined';
+  var TV = (typeof tizen !== 'undefined' || !!window.PalmSystem);
   var DF = TV ? 1 : 0.72;
   var KINDS = {
     planet: { facts: [['Region', 'region'], ['Climate', 'climate'], ['Terrain', 'terrain']], more: 'planets' },
@@ -7697,7 +7702,7 @@ window.IvfWebLoaded = true;
   window.addEventListener('keydown', function (e) {
     if (!cur) return;
     var k = e.key || '', kc = e.keyCode;
-    var back = k === 'Escape' || k === 'Backspace' || k === 'GoBack' || k === 'BrowserBack' || kc === 10009 || kc === 27 || kc === 8;
+    var back = k === 'Escape' || k === 'Backspace' || k === 'GoBack' || k === 'BrowserBack' || (kc === 10009 || kc === 461) || kc === 27 || kc === 8;
     var dir = k === 'ArrowLeft' || kc === 37 ? 'l' : k === 'ArrowRight' || kc === 39 ? 'r' : k === 'ArrowUp' || kc === 38 ? 'u' : k === 'ArrowDown' || kc === 40 ? 'd' : '';
     if (!back && !dir) return; // OK / Enter reach the focused link (a button)
     e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
@@ -7799,7 +7804,7 @@ window.IvfSwPlanets = {"version":"2026-11-19","credit":"Pictures: Wookieepedia (
 // The choice is remembered on this TV / browser. Android IvanaFin has the same button.
 (function () {
   'use strict';
-  var TV = typeof tizen !== 'undefined';
+  var TV = (typeof tizen !== 'undefined' || !!window.PalmSystem);
   var KEY = 'ivf-sw-sort';
   var STYLE_ID = 'ivf-swt-style';
   var libs = {}; // library id -> Promise of { itemId: { key, label } } (null: not a Star Wars library)

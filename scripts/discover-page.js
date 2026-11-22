@@ -16,7 +16,7 @@
 // goes from the content to the tabs, then (home-grid.js) out of Discover.
 (function () {
   'use strict';
-  var TV = typeof tizen !== 'undefined';
+  var TV = (typeof tizen !== 'undefined' || !!window.PalmSystem);
   var IMG = 'https://image.tmdb.org/t/p/';
   var TABS = ['Discover', 'Search', 'Request', 'Movies', 'TV Shows'];
   var ROWS = [

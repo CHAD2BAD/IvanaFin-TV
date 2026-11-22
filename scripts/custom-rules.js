@@ -44,7 +44,7 @@
 // with a finger still selects.
 (function () {
   'use strict';
-  if (typeof tizen !== 'undefined' || window.__ivfRightClick) return;
+  if ((typeof tizen !== 'undefined' || !!window.PalmSystem) || window.__ivfRightClick) return;
   window.__ivfRightClick = true;
   var lastPointer = 'mouse';
   window.addEventListener('pointerdown', function (e) { lastPointer = e.pointerType || 'mouse'; }, true);
