@@ -1,4 +1,4 @@
-/* IvanaFin for Jellyfin web - https://github.com/CHAD2BAD/IvanaFin-Samsung (built file, do not edit) */
+/* IvanaFin for Jellyfin web - https://github.com/CHAD2BAD/IvanaFin-TV (built file, do not edit) */
 (function () {
 if (window.IvfWebLoaded) return; // loaded twice: run once
 window.IvfWebLoaded = true;

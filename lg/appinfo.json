@@ -1,0 +1,15 @@
+{
+    "id": "org.ivanafin.tv",
+    "version": "1.0.0",
+    "vendor": "CHAD2BAD",
+    "type": "web",
+    "main": "www/index.html",
+    "title": "IvanaFin",
+    "icon": "icon.png",
+    "largeIcon": "largeIcon.png",
+    "bgColor": "#000000",
+    "iconColor": "#000000",
+    "resolution": "1920x1080",
+    "disableBackHistoryAPI": true,
+    "uiRevision": 2
+}

@@ -1,4 +1,4 @@
-// IvanaFin for Samsung (friends' build): runs before the IvanaFin scripts.
+// IvanaFin for Samsung and LG (any-server builds): runs before the IvanaFin scripts.
 // - The IvanaFin look (ElegantFin theme + its colours) is built into the app, so it works on any server.
 // - Discover needs the Jellyfin Enhanced plugin (+ Seerr) on the server. Once signed in, its script is
 //   loaded from whichever server the app is connected to; a server without it just has no Discover.

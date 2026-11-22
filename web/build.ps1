@@ -7,7 +7,7 @@ $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 $cat = [IO.File]::ReadAllText((Join-Path $root '..\public\welcome-picture.b64')).Trim()
 $sb = New-Object Text.StringBuilder
-[void]$sb.Append("/* IvanaFin for Jellyfin web - https://github.com/CHAD2BAD/IvanaFin-Samsung (built file, do not edit) */`n")
+[void]$sb.Append("/* IvanaFin for Jellyfin web - https://github.com/CHAD2BAD/IvanaFin-TV (built file, do not edit) */`n")
 [void]$sb.Append("(function () {`nif (window.IvfWebLoaded) return; // loaded twice: run once`nwindow.IvfWebLoaded = true;`n")
 [void]$sb.Append([IO.File]::ReadAllText((Join-Path $root 'boot.js'))).Append("`n")
 foreach ($f in Get-ChildItem (Join-Path $root '..\scripts') -Filter *.js | Sort-Object Name) {

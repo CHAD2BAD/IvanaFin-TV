@@ -1,22 +1,28 @@
-# IvanaFin for Samsung and Jellyfin web
+# IvanaFin for Samsung, LG and Jellyfin web
 
 <p align="center"><img src="cat.jpg" width="240" alt="Ivana"><br><sub>Ivana thanks you for downloading</sub></p>
 
-IvanaFin is a [Jellyfin](https://jellyfin.org) app for Samsung smart TVs (Tizen), with its own look:
-a big-tile home screen, full-screen film and show pages, a music library in the style of a TV music app,
-and extras for Star Wars films and shows. It is the Samsung version of
-[IvanaFin for Android TV / Fire TV](https://github.com/CHAD2BAD/IvanaFin-Android); LG TVs have
-[IvanaFin for LG](https://github.com/CHAD2BAD/IvanaFin-webOS). The same look is also
-available for Jellyfin in a browser: see [Jellyfin web](#jellyfin-web).
+IvanaFin is a [Jellyfin](https://jellyfin.org) app for **Samsung** (Tizen) and **LG** (webOS) smart TVs, with
+its own look: a big-tile home screen, full-screen film and show pages, a music library in the style of a TV
+music app, and extras for Star Wars films and shows. The same look is also available for Jellyfin in a
+browser (see [Jellyfin web](#jellyfin-web)), and for Android TV / Fire TV as
+[IvanaFin for Android](https://github.com/CHAD2BAD/IvanaFin-Android).
 
-The Samsung app works with **any Jellyfin server**. Nothing needs to be installed on the server: the IvanaFin
+Both TV apps work with **any Jellyfin server**. Nothing needs to be installed on the server: the IvanaFin
 look is built into the app.
 
-> **Status:** early. The same scripts run on the author's Samsung S90D (Tizen 9); this any-server build is new.
+> **Status:** early. The Samsung app runs every day on the author's Samsung S90D (Tizen 9).
+> The LG app has been tested on LG's webOS TV 26 simulator, not yet on a real LG TV: everything works there
+> except video, which the simulator can't play at all (LG TVs play Jellyfin's video streams themselves; the
+> simulator has no player for them). If something doesn't work on your TV, please [open an issue](../../issues).
+
+**Contents:** [What you get](#what-you-get) · [Install on Samsung](#install-on-samsung) ·
+[Install on LG](#install-on-lg) · [Discover needs Seerr](#discover-needs-seerr) ·
+[Jellyfin web](#jellyfin-web) · [Build it yourself](#build-it-yourself)
 
 ## What you get
 
-<p align="center"><img src="home.jpg" width="720" alt="IvanaFin home screen with four big tiles: Movies, TV, Songs and Other"><br><sub>The home screen on a Samsung TV</sub></p>
+<p align="center"><img src="images/samsung-home.jpg" width="720" alt="IvanaFin home screen with four big tiles: Movies, TV, Songs and Other"><br><sub>The home screen on a Samsung TV</sub></p>
 
 - **Home:** big tiles for your libraries. The first time, IvanaFin shows your biggest Movies, Shows and
   Music library, plus a library named **Other** if you have one. To choose the tiles yourself, open Jellyfin's
@@ -29,10 +35,54 @@ look is built into the app.
   Characters and Starships rows with a card for each, the in-universe year, the opening crawl and
   "In Story Order". A library that is mostly Star Wars gets a timeline sort button.
 - **Discover** (browse and request films and shows) - **needs Seerr set up first** (see below).
+- The TV remote works throughout: arrows, OK, Back, and Play / Pause / Stop / Rewind / Fast-forward.
+
+<p align="center"><img src="images/lg-home.jpg" width="720" alt="IvanaFin home screen with Search, Discover and Settings above four big tiles: Movies, TV, Songs and Other"><br><sub>The same home screen on an LG TV (webOS simulator)</sub></p>
+
+## Install on Samsung
+
+Samsung only installs apps from its store, so this is installed in developer mode with
+[Apps2Samsung](https://github.com/Apps2Samsung/Apps2Samsung) (Windows), which signs the
+app for your TV:
+
+1. Download `IvanaFin.wgt` from [Releases](../../releases).
+2. Put the TV in developer mode: open **Apps**, press **1 2 3 4 5** on the remote, switch
+   **Developer mode** on and enter your computer's IP address, then restart the TV.
+3. Run Apps2Samsung on the computer, pick your TV and choose **Install a file...** with `IvanaFin.wgt`.
+4. Open IvanaFin on the TV and sign in to your Jellyfin server.
+
+IvanaFin installs next to the official Jellyfin app (it has its own app id). To update it, install a newer
+`IvanaFin.wgt` the same way.
+
+## Install on LG
+
+LG only installs apps from its store, so IvanaFin is installed with LG's free **Developer Mode**:
+
+1. Make a free account on [LG's developer site](https://webostv.developer.lge.com) (top right: *Sign In* >
+   *Create Account*).
+2. On the TV, open the **LG Content Store**, search for **Developer Mode**, install it and open it. Sign in
+   with that account, switch **Dev Mode Status** on (the TV restarts), open the app again and switch
+   **Key Server** on. Leave this screen open: it shows the TV's IP address and a passphrase.
+3. On your computer, install [webOS Dev Manager](https://github.com/webosbrew/dev-manager-desktop/releases)
+   (Windows, macOS, Linux). Add your TV with its IP address and the passphrase from step 2.
+4. Download `IvanaFin.ipk` from [Releases](../../releases), and in Dev Manager choose
+   **Apps > Install** with that file.
+5. Open IvanaFin from the TV's app bar and sign in to your Jellyfin server.
+
+> **Developer Mode runs out.** LG gives it 50 hours at a time; the Developer Mode app (and Dev Manager)
+> shows the time left and has an **Extend** button. If it runs out, the TV removes apps installed this way
+> and you install IvanaFin again. On a rooted TV with the [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel)
+> there is no time limit.
+
+Or from the command line, with LG's CLI (`npm install -g @webos-tools/cli`):
+`ares-setup-device` (add the TV), then `ares-install --device <name> IvanaFin.ipk`.
+
+IvanaFin installs next to the official Jellyfin app (it has its own app id). To update it, install a newer
+`IvanaFin.ipk` the same way.
 
 ## Discover needs Seerr
 
-<p align="center"><img src="discover.jpg" width="720" alt="IvanaFin Discover page: a featured film at the top and a Trending row of posters"><br><sub>Discover on a Samsung TV</sub></p>
+<p align="center"><img src="images/samsung-discover.jpg" width="720" alt="IvanaFin Discover page: a featured film at the top and a Trending row of posters"><br><sub>Discover on a Samsung TV</sub></p>
 
 Everything else works with a plain Jellyfin server, but **Discover only appears if your server has
 [Seerr](https://github.com/seerr-team/seerr) set up**. Without it, the Discover tile and button are hidden.
@@ -62,27 +112,12 @@ To turn it on:
    - **Services:** pick the default Radarr and Sonarr server, with a root folder and quality profile that
      really exist there (a wrong root folder makes every request fail).
 3. Install the [Jellyfin Enhanced](https://github.com/n00bcodr/Jellyfin-Enhanced) plugin on your
-   Jellyfin server and enter your Seerr address and API key in its settings (Samsung and web use it).
+   Jellyfin server and enter your Seerr address and API key in its settings (Samsung, LG and web use it).
 4. **Cancel button (recommended):** run the small [IvanaFin Seerr helper](seerr-helper) with Docker
    on the same machine as Jellyfin. It gives Discover a real **Cancel**: the request is removed in Seerr
    *and* the download is stopped in Radarr / Sonarr. Without it, the Cancel button isn't shown. (On Jellyfin
    web it only works when Jellyfin is opened over `http`, on your home network.)
 5. Restart IvanaFin on the TV, or reload Jellyfin web.
-
-## Install
-
-Samsung only installs apps from its store, so this is installed in developer mode with
-[Apps2Samsung](https://github.com/Apps2Samsung/Apps2Samsung) (Windows), which signs the
-app for your TV:
-
-1. Download `IvanaFin.wgt` from [Releases](../../releases).
-2. Put the TV in developer mode: open **Apps**, press **1 2 3 4 5** on the remote, switch
-   **Developer mode** on and enter your computer's IP address, then restart the TV.
-3. Run Apps2Samsung on the computer, pick your TV and choose **Install a file...** with `IvanaFin.wgt`.
-4. Open IvanaFin on the TV and sign in to your Jellyfin server.
-
-IvanaFin installs next to the official Jellyfin app (it has its own app id). To update it, install a newer
-`IvanaFin.wgt` the same way.
 
 ## Jellyfin web
 
@@ -123,11 +158,11 @@ theme in *Dashboard > General > Custom CSS*, remove it. Tested with Jellyfin 12.
    enabled, and save:
 
    ```js
-   // IvanaFin for Jellyfin web - https://github.com/CHAD2BAD/IvanaFin-Samsung#jellyfin-web
+   // IvanaFin for Jellyfin web - https://github.com/CHAD2BAD/IvanaFin-TV#jellyfin-web
    (function () {
      if (window.IvfWebLoader) return; window.IvfWebLoader = true;
      var s = document.createElement('script');
-     s.src = 'https://cdn.jsdelivr.net/gh/CHAD2BAD/IvanaFin-Samsung@main/web/ivanafin.js';
+     s.src = 'https://cdn.jsdelivr.net/gh/CHAD2BAD/IvanaFin-TV@main/web/ivanafin.js';
      s.onerror = function () { console.error('IvanaFin could not be loaded from ' + s.src); };
      (document.head || document.documentElement).appendChild(s);
    })();
@@ -137,27 +172,36 @@ theme in *Dashboard > General > Custom CSS*, remove it. Tested with Jellyfin 12.
 Updates arrive by themselves within about 12 hours of a new version here (that's how long the
 [jsDelivr](https://www.jsdelivr.com) copy is kept).
 
+> **Installed before this repository was renamed** (it used to be IvanaFin-Samsung)? Your server still loads
+> from the old address, which keeps working. To switch to the new one, run the installer again - it updates
+> the `IvanaFin` script in place.
+
 **To remove it:** run the installer again with `-Uninstall` at the end, or delete the `IvanaFin` script under
 **Dashboard > Plugins > JavaScript Injector**, then reload the page.
 
 ## Build it yourself
 
-Windows PowerShell, with a Jellyfin server's web client on the same computer:
+Windows PowerShell, with a Jellyfin server's web client on the same computer. The LG app also needs
+[Node.js](https://nodejs.org) and LG's CLI (`npm install -g @webos-tools/cli`).
 
 ```
-powershell -File build.ps1 [-WebDir <folder of jellyfin-web>]
+powershell -File build.ps1 [-WebDir <folder of jellyfin-web>] [-Only samsung|lg|web]
 ```
 
-This writes `IvanaFin.wgt` (unsigned). `-WebDir` defaults to `C:\Program Files\Jellyfin\Server\jellyfin-web`.
-Use the web client of the same Jellyfin version as your server.
+This writes `IvanaFin.wgt` (Samsung, unsigned), `IvanaFin.ipk` (LG) and `web\ivanafin.js` (the file Jellyfin
+web loads). `-WebDir` defaults to `C:\Program Files\Jellyfin\Server\jellyfin-web`. Use the web client of the
+same Jellyfin version as your server. To try the LG app without a TV, LG's free
+[webOS TV Simulator](https://webostv.developer.lge.com/develop/tools/simulator-installation) opens the
+unpacked app in `build\lg`.
 
-The web version: `powershell -File web\build.ps1` joins `scripts\` and `web\boot.js` into `web\ivanafin.js`,
-the file Jellyfin web loads.
+Layout: `scripts\` (the IvanaFin scripts), `public\` (theme, welcome picture, version) and `welcome.html` are
+shared; `samsung\` and `lg\` hold each TV's app shell and build script; `web\` is the Jellyfin web version.
 
 ## Credits and licences
 
-- **Jellyfin** web client (inside the `.wgt`) - GPL-2.0. The Tizen shell (`tizen.js`, `config.xml`) follows
-  [jellyfin-tizen](https://github.com/jellyfin/jellyfin-tizen) - MPL-2.0.
+- **Jellyfin** web client (inside the `.wgt` and `.ipk`) - GPL-2.0. The Tizen shell (`samsung\tizen.js`,
+  `config.xml`) follows [jellyfin-tizen](https://github.com/jellyfin/jellyfin-tizen), the webOS shell
+  (`lg\webos.js`, `appinfo.json`) follows [jellyfin-webos](https://github.com/jellyfin/jellyfin-webos) - both MPL-2.0.
 - **ElegantFin** theme by lscambo13 (loaded from its CDN) - see its own licence.
 - **JavaScript Injector** and **Jellyfin Enhanced** plugins by n00bcodr.
 - **Star Wars facts** shown in the Planets / Characters / Starships rows are summarised from
@@ -166,5 +210,7 @@ the file Jellyfin web loads.
   they belong to their owners. Star Wars is a trademark of Lucasfilm Ltd. This project is not affiliated
   with Lucasfilm or Disney.
 - **Deezer** data is used for artist pages through Deezer's public API; IvanaFin is not affiliated with Deezer.
+- Samsung and Tizen are trademarks of Samsung Electronics; LG and webOS are trademarks of LG Electronics.
+  This project is not affiliated with Samsung or LG.
 
 This repository is under the **Mozilla Public License 2.0** (see [LICENSE](LICENSE)).

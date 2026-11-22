@@ -12,7 +12,7 @@ param(
     [string]$ApiKey,
     [switch]$Uninstall,
     [switch]$Restart,     # restart Jellyfin without asking when the plugin was just installed
-    [string]$Source = 'https://cdn.jsdelivr.net/gh/CHAD2BAD/IvanaFin-Samsung@main/web/ivanafin.js'
+    [string]$Source = 'https://cdn.jsdelivr.net/gh/CHAD2BAD/IvanaFin-TV@main/web/ivanafin.js'
 )
 $ErrorActionPreference = 'Stop'
 $Server = $Server.TrimEnd('/')
@@ -83,7 +83,7 @@ if ($Uninstall) {
     return
 }
 $loader = @"
-// IvanaFin for Jellyfin web - https://github.com/CHAD2BAD/IvanaFin-Samsung#jellyfin-web
+// IvanaFin for Jellyfin web - https://github.com/CHAD2BAD/IvanaFin-TV#jellyfin-web
 (function () {
   if (window.IvfWebLoader) return; window.IvfWebLoader = true;
   var s = document.createElement('script');
