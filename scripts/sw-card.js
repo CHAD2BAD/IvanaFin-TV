@@ -31,7 +31,9 @@
       '.ivf-pl-img{flex:none;width:' + d(170) + ';height:' + d(170) + ';border-radius:50%;background:#000 center/cover no-repeat}',
       '.ivf-pl.ship .ivf-pl-img{width:' + d(220) + ';height:' + d(150) + ';border-radius:' + d(10) + ';background-size:contain;background-color:#050505}',
       '.ivf-pl.char .ivf-pl-img{background-position:center top}',
-      '.ivf-pl-txt{flex:1;min-width:0}',
+      // (round 7: the window changed size with every planet as you moved Left/Right - one steady size, the hint line at its foot)
+      '.ivf-pl{min-height:' + d(400) + '}',
+      '.ivf-pl-txt{flex:1;min-width:0;display:flex;flex-direction:column}','.ivf-pl-foot{margin-top:auto !important}',
       '.ivf-pl-name{font-size:' + d(24) + ';line-height:' + d(30) + ';font-weight:600;color:#fff}',
       '.ivf-pl-facts{display:grid;grid-template-columns:auto 1fr;gap:' + d(2) + ' ' + d(12) + ';margin:' + d(8) + ' 0 ' + d(12) + ';font-size:' + d(12) + ';line-height:' + d(17) + '}',
       '.ivf-pl-facts dt{color:#9ca3af}',

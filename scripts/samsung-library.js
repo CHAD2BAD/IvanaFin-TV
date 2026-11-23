@@ -32,7 +32,7 @@
     var s = document.createElement('style');
     s.id = STYLE_ID;
     s.textContent = [
-      ':root{--ivf-dp:calc(100vw / 960)}',
+      ':root{--ivf-dp:calc(100vw / 960)}@media (max-width:760px) and (orientation:portrait){:root{--ivf-dp:calc(100vw / 280)}}@media (max-height:500px) and (orientation:landscape){:root{--ivf-dp:calc(100vw / 640)}}',
       // No "press" shrink when choosing a poster/card (ElegantFin: .emby-button:active scale(.98),
       // .cardScalable:active scale(1)); the focus grow stays
       '.card:active,.card.emby-button:active{transform:none !important;filter:none !important}',
@@ -107,7 +107,20 @@
       L + '.page:not(.hide).libraryPage .itemsContainer .cardText-first{font-size:calc(' + d + ' * 14) !important;line-height:calc(' + d + ' * 20) !important;font-weight:600 !important;letter-spacing:calc(' + d + ' * 0.25) !important;opacity:1}',
       // no extra side padding from the page/tab wrappers around the grid
       L + '.page:not(.hide).libraryPage .pageTabContent,' + L + '.page:not(.hide).libraryPage .padded-left{padding-left:0 !important}',
-      L + '.page:not(.hide).libraryPage .pageTabContent,' + L + '.page:not(.hide).libraryPage .padded-right{padding-right:0 !important}'
+      L + '.page:not(.hide).libraryPage .pageTabContent,' + L + '.page:not(.hide).libraryPage .padded-right{padding-right:0 !important}',
+      // Jellyfin's newer (phone app) layout keeps room for its top bar twice on library pages it draws itself
+      // (e.g. a mixed library): above the page AND inside it - a big empty band over the posters (user 2026-11-22)
+      TV ? '' : 'body:has(header.MuiAppBar-root) .page.libraryPage.pageWithAbsoluteTabs:not(.hide){padding-top:12px !important}',
+      // Phone app layout (2026-11-22, user): no second bar with the library name and page arrows on
+      // IvanaFin libraries with one page (a big library keeps it: its arrows change page) - the posters start under the top bar (its spacer follows the bar's height)
+      TV ? '' : L + 'header.MuiAppBar-root:not(:has(button[title="Next"]:not(:disabled))):not(:has(button[title="Previous"]:not(:disabled))) > .MuiToolbar-root ~ .MuiToolbar-root{display:none !important}' + L + 'header.MuiAppBar-root:not(:has(button[title="Next"]:not(:disabled))):not(:has(button[title="Previous"]:not(:disabled))) + div[style*="height"]{height:48px !important}',
+      // Phone (2026-11-22): 3 posters per row, 12px apart, 16px from the edges
+      '@media (max-width:760px) and (orientation:portrait){',
+      L + '.page:not(.hide).libraryPage .itemsContainer.vertical-wrap{padding-left:16px !important;padding-right:16px !important;column-gap:12px !important;row-gap:18px !important}',
+      L + '.page:not(.hide).libraryPage .itemsContainer.vertical-wrap > .card{width:calc((100% - 24px) / 3) !important;flex:0 0 calc((100% - 24px) / 3) !important}',
+      L + '.page:not(.hide).libraryPage .itemsContainer .cardText{font-size:12px !important;line-height:16px !important}',
+      L + '.page:not(.hide).libraryPage .itemsContainer .cardText-first{font-size:13px !important;line-height:18px !important}',
+      '}'
     ].join('');
     document.head.appendChild(s);
   }

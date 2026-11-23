@@ -38,7 +38,11 @@
       'letter-spacing:' + u(0.1) + ';cursor:pointer;outline:none}',
       '.ivf-swt-btn .material-icons{font-size:' + u(20) + ';color:inherit}',
       '.ivf-swt-btn:focus,.ivf-swt-btn:hover{background:#d1d5db;color:#131414}',
-      TV ? '' : '.ivf-swt-btn:focus:not(:focus-visible):not(:hover){background:rgba(14,14,14,.9);color:#d1d5db}'
+      TV ? '' : '.ivf-swt-btn:focus:not(:focus-visible):not(:hover){background:rgba(14,14,14,.9);color:#d1d5db}',
+      // phone app layout: the button alone in Jellyfin's second bar
+      TV ? '' : '.ivf-swt-tb{justify-content:center !important;min-height:52px !important}.ivf-swt-tb > :not(.ivf-swt-bar){display:none !important}' +
+        '.ivf-swt-tb .ivf-swt-bar{position:static;transform:none}.ivf-swt-tb .ivf-swt-btn{min-height:36px;padding:6px 16px;font-size:14px;line-height:20px;background:rgba(255,255,255,.12)}' +
+        '.ivf-swt-tb .ivf-swt-btn .material-icons{font-size:18px}body:has(.ivf-swt-tb) [class*="alphaPicker"]{display:none !important}'
     ].join('');
     document.head.appendChild(s);
   }
@@ -53,7 +57,7 @@
     var uid = ApiClient.getCurrentUserId(), sw = window.IvfSw;
     if (!sw) return Promise.resolve(null);
     function items(q) {
-      return ApiClient.getJSON(ApiClient.getUrl('/Users/' + uid + '/Items', Object.assign({ ParentId: id, Recursive: true, IncludeItemTypes: 'Movie,Series', Fields: 'ProviderIds', EnableImages: false, EnableUserData: false }, q)))
+      return ApiClient.getJSON(ApiClient.getUrl('/Users/' + uid + '/Items', Object.assign({ ParentId: id, Recursive: true, IncludeItemTypes: 'Movie,Series', Fields: 'ProviderIds,PremiereDate', EnableImages: false, EnableUserData: false }, q)))
         .then(function (r) { return (r && r.Items) || []; });
     }
     libs[id] = items({ SortBy: 'Random', Limit: 60 }).then(function (sample) {
@@ -61,7 +65,13 @@
       if (n < 3 || n < sample.length * 0.75) return null;
       return items({}).then(function (all) {
         var map = {};
-        all.forEach(function (it) { var pl = sw.place(it); if (pl) map[it.Id] = { key: pl.k, label: pl.year }; });
+        // release dates too: the page isn't always in release order (the phone app's layout sorts by name)
+        var dates = {};
+        Object.defineProperty(map, '_dates', { value: dates });
+        all.forEach(function (it) {
+          var pl = sw.place(it); if (pl) map[it.Id] = { key: pl.k, label: pl.year };
+          var t = it.PremiereDate ? Date.parse(it.PremiereDate) : NaN; if (!isNaN(t)) dates[it.Id] = t;
+        });
         return map;
       });
     })['catch'](function () { delete libs[id]; return null; });
@@ -93,7 +103,13 @@
     });
     var tl = mode() === 'timeline';
     var sorted = cards.slice().sort(function (a, b) {
-      if (!tl) return a._ivfIndex - b._ivfIndex;
+      if (!tl) {
+        var ta = data._dates && data._dates[a.getAttribute('data-id')], tb = data._dates && data._dates[b.getAttribute('data-id')];
+        if (ta != null && tb != null && ta !== tb) return ta - tb;
+        if (ta != null && tb == null) return -1;
+        if (tb != null && ta == null) return 1;
+        return a._ivfIndex - b._ivfIndex;
+      }
       var da = data[a.getAttribute('data-id')], db = data[b.getAttribute('data-id')];
       if (da && db) return da.key - db.key;
       if (da) return -1;
@@ -120,8 +136,9 @@
       var y = c.querySelector('.cardText-secondary, .cardText:not(.cardText-first)');
       if (!y) return;
       var d = data[c.getAttribute('data-id')];
-      // timeline: titles outside the story (extras) show no year; a no-break space keeps the row height
-      var want = tl ? (d && d.label ? d.label : ' ') : c._ivfYear;
+      // timeline: titles outside the story (extras, documentaries, Visions) say so - round 7: a blank
+      // line looked like missing data
+      var want = tl ? (d && d.label ? d.label : 'Not in the timeline') : c._ivfYear;
       if (want != null && y.textContent !== want) y.textContent = want;
     });
     // the Sort pill above the grid
@@ -150,6 +167,14 @@
       if (h.getBoundingClientRect().height > 0) head = h;
     });
     if (!head) return;
+    // Jellyfin's newer (phone app) layout: its second bar (library name, view, sort, filter, page arrows)
+    // becomes just this button, centred (user 2026-11-22)
+    var tb = head.matches('header.MuiAppBar-root') && head.querySelectorAll(':scope > .MuiToolbar-root')[1];
+    if (tb) {
+      if (bar.parentNode !== tb) tb.appendChild(bar);
+      tb.classList.add('ivf-swt-tb');
+      return;
+    }
     if (bar.parentNode !== head) head.appendChild(bar);
     var hr = head.getBoundingClientRect(), mid = 0;
     // the middle of the bar's round icon buttons (back arrow, menu, search, user...)
@@ -167,11 +192,12 @@
   function removeFromHeader() {
     if (TV) return;
     Array.prototype.forEach.call(document.querySelectorAll('.ivf-swt-bar'), function (b) { b.parentNode.removeChild(b); });
+    Array.prototype.forEach.call(document.querySelectorAll('.ivf-swt-tb'), function (t) { t.classList.remove('ivf-swt-tb'); });
   }
 
   function check() {
     if (typeof ApiClient === 'undefined' || !ApiClient.getCurrentUserId || !ApiClient.getCurrentUserId()) return;
-    if (!/^#\/(list|movies|tv)/.test(location.hash || '')) { removeFromHeader(); return; }
+    if (!/^#\/(list|movies|tv|mixed)/.test(location.hash || '')) { removeFromHeader(); return; }
     var id = hashLib();
     if (!id) { removeFromHeader(); return; }
     load(id).then(function (map) {

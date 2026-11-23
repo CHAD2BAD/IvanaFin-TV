@@ -169,7 +169,7 @@ window.IvfWebLoaded = true;
     var s = document.createElement('style');
     s.id = 'ivf-dsc-style';
     s.textContent = [
-      ':root{--ivf-dp:calc(100vw / 960)}',
+      ':root{--ivf-dp:calc(100vw / 960)}@media (max-width:760px) and (orientation:portrait){:root{--ivf-dp:calc(100vw / 280)}}@media (max-height:500px) and (orientation:landscape){:root{--ivf-dp:calc(100vw / 640)}}',
       // runs to the very top so the backdrop does too; on web Jellyfin's top bar floats over it, fading
       // from dark into the picture (same as the film page), and the content starts below the bar
       '#ivf-dsc{position:fixed;left:0;right:0;bottom:0;top:0;z-index:900;background:#000;color:#d1d5db;overflow:hidden;font-family:inherit}',
@@ -508,6 +508,9 @@ window.IvfWebLoaded = true;
       '.ivf-dd-btn .lbl{max-width:0;overflow:hidden;white-space:nowrap;transition:max-width .18s,padding .18s}',
       '.ivf-dd-btn:focus,.ivf-dd-btn:hover{background:#d1d5db;color:#131414;transform:scale(1.1)}',
       '.ivf-dd-btn:focus .lbl,.ivf-dd-btn:hover .lbl{max-width:' + v(200) + ';padding:0 ' + v(6) + ' 0 ' + v(2) + '}',
+      // web (round 7): with a mouse nothing is selected, so a lone download icon didn't say what it does -
+      // the first (main) button always shows its name
+      TV ? '' : '.ivf-dd-btn:first-child .lbl{max-width:' + v(200) + ';padding:0 ' + v(6) + ' 0 ' + v(2) + '}.ivf-dd-btn:first-child:not(:hover){background:rgba(255,255,255,.12)}',
       '.ivf-dd-btn[disabled]{opacity:.45;cursor:default}',
       '.ivf-dd-progress{font-size:' + v(15) + ';font-weight:500}',
       '.ivf-dd-tag{margin-left:' + v(8) + ';max-width:60%;font-size:' + v(16) + ';font-style:italic}',
@@ -609,7 +612,8 @@ window.IvfWebLoaded = true;
   }
   function names(list) {
     var seen = {}, out = [];
-    (list || []).forEach(function (x) { var n = x && x.name; if (n && !seen[n]) { seen[n] = 1; out.push(n); } });
+    // (round 7: TMDB listed a studio named "about:blank" - junk names are skipped)
+    (list || []).forEach(function (x) { var n = x && x.name; if (n && !/^(about:blank|null|undefined|n\/a)$/i.test(n.trim()) && !seen[n]) { seen[n] = 1; out.push(n); } });
     return out;
   }
   // Seerr media status: 1 unknown, 2 pending, 3 processing, 4 partly available, 5 available, 6 blocklisted, 7 deleted
@@ -1459,7 +1463,7 @@ window.IvfWebLoaded = true;
     var s = document.createElement('style');
     s.id = STYLE_ID;
     s.textContent = [
-      ':root{--ivf-dp:calc(100vw / 960)}',
+      ':root{--ivf-dp:calc(100vw / 960)}@media (max-width:760px) and (orientation:portrait){:root{--ivf-dp:calc(100vw / 280)}}@media (max-height:500px) and (orientation:landscape){:root{--ivf-dp:calc(100vw / 640)}}',
       'html,html *:not(.material-icons):not([class*="material-icons"]):not(.md-icon):not(i){font-family:Roboto,"Noto Sans",sans-serif !important}',
       // While our Home is up the web's header is hidden (no logo, tabs, icons or clock)
       TV ? 'html.ivf-shome-on .skinHeader{display:none !important}' : '',
@@ -1532,7 +1536,10 @@ window.IvfWebLoaded = true;
       '.ivf-sh-img.ivf-on{opacity:1}',
       '.ivf-sh-shade{position:absolute;inset:0;background:rgba(0,0,0,.35)}',
       '.ivf-sh-name{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;',
-      'padding:0 calc(' + d + ' * 24);color:#fff;font-weight:700;line-height:1.15;text-shadow:0 calc(' + d + ' * 1) calc(' + d + ' * 3) rgba(0,0,0,.85),0 0 calc(' + d + ' * 16) rgba(0,0,0,.7)}' /* round 5: pale tile pictures */
+      'padding:0 calc(' + d + ' * 24);color:#fff;font-weight:700;line-height:1.15;text-shadow:0 calc(' + d + ' * 1) calc(' + d + ' * 3) rgba(0,0,0,.85),0 0 calc(' + d + ' * 16) rgba(0,0,0,.7)}' /* round 5: pale tile pictures */,
+      // Phone (2026-11-22): tile names sized for the phone, not the TV (the inline size was cut off)
+      '@media (max-width:760px) and (orientation:portrait){.ivf-sh-name{font-size:22px !important;padding:0 6px}#ivf-shome .ivf-sh-grid{grid-template-columns:repeat(2,1fr) !important}}',
+      '@media (max-height:500px) and (orientation:landscape){.ivf-sh-name{font-size:24px !important}}'
     ].join('');
     document.head.appendChild(s);
   }
@@ -1733,7 +1740,13 @@ window.IvfWebLoaded = true;
       .filter(function (e) { return cfg.types[e.id] !== 'playlists'; });
     if (cfg.picks) list = cfg.picks.map(function (id) { return list.filter(function (e) { return e.id === id; })[0]; }).filter(Boolean);
     if (cfg.games) list.push({ name: 'Games', act: 'games' });
+    // Phone (2026-11-22, user): no Music or Games tile - not needed on the phone
+    if (isPhone()) list = list.filter(function (e) { return e.act !== 'games' && cfg.types[e.id] !== 'music'; });
     return list;
+  }
+  // the phone app / a phone browser, either way up (the same test as the phone sizes in every script)
+  function isPhone() {
+    try { return !TV && window.matchMedia('(max-width:760px) and (orientation:portrait), (max-height:500px) and (orientation:landscape)').matches; } catch (e) { return false; }
   }
   // Discover needs Jellyfin Enhanced (+ Seerr) on the server
   function hasDiscover() { return !!window.JellyfinEnhanced; }
@@ -1746,7 +1759,7 @@ window.IvfWebLoaded = true;
     var dsc = hasDiscover();
     // (no Discover tile any more: its trending pictures aren't fetched)
     var sig = cards.map(function (c) { return c.getAttribute('data-id') + ':' + cardName(c); }).join(',') +
-      '|' + (cfg.picks || []).join(',') + (cfg.games ? '|games' : '') + (dsc ? '|dsc' : '');
+      '|' + (cfg.picks || []).join(',') + (cfg.games ? '|games' : '') + (dsc ? '|dsc' : '') + (isPhone() ? '|phone' : '');
     if (!root) {
       addStyle();
       root = document.createElement('div');
@@ -1795,6 +1808,11 @@ window.IvfWebLoaded = true;
     return true;
   }
 
+  var kbUser = false; // web: the last thing used was the keyboard (not the mouse)
+  if (!TV) {
+    window.addEventListener('keydown', function (e) { if (/^(Tab|Arrow|Enter|Escape|Page)/.test(e.key || '')) kbUser = true; }, true);
+    window.addEventListener('pointerdown', function () { kbUser = false; }, true);
+  }
   function focusStart() {
     var last = -1;
     try { last = parseInt(sessionStorage.getItem(LAST_KEY) || '-1', 10); } catch (e) {}
@@ -1875,8 +1893,9 @@ window.IvfWebLoaded = true;
       if (games) setTilePicture(games, gamesUrl);
     }
     fitNamesSoon();
-    // TV only: something must always be selected for the remote (web has a mouse - nothing preselected)
-    if (TV && (wasHidden || !root.contains(document.activeElement))) {
+    // TV: something must always be selected for the remote. Web: only for someone using the keyboard
+    // (round 7: Back to Home always started again on Movies) - mouse users get nothing preselected
+    if ((TV || kbUser) && (wasHidden || !root.contains(document.activeElement))) {
       focusStart();
       holdFocus();
     }
@@ -2281,7 +2300,43 @@ window.IvfWebLoaded = true;
   document.addEventListener('viewshow', function () {
     if (!/^#\/details/.test(location.hash)) return;
     [300, 1000, 2500].forEach(function (ms) { setTimeout(fix, ms); });
+    if (TV) [600, 1500].forEach(function (ms) { setTimeout(toTop, ms); });
   });
+  var TV = (typeof tizen !== 'undefined' || !!window.PalmSystem) || localStorage.getItem('layout') === 'tv';
+  // Round-7 beta, person pages:
+  // - Samsung/LG: the page opened scrolled down to its first card, so the name and bio were off the top.
+  //   Scroll back to the top while the selected card stays on screen.
+  function toTop() {
+    var pg = document.querySelector('.page:not(.hide)'), a = document.activeElement;
+    if (!pg || !pg.querySelector('.jellyseerr-person-discovery-section, .detailSectionContent .overview') || !a || !pg.contains(a)) return;
+    var sc = pg.querySelector('.itemDetailPage, .padded-top-focusscale') || pg;
+    [pg, sc, document.scrollingElement].forEach(function (s) {
+      if (!s || !s.scrollTop) return;
+      // room = how far the page can move down before the selected card leaves the bottom
+      var room = window.innerHeight - a.getBoundingClientRect().bottom - 24;
+      s.scrollTop -= Math.min(s.scrollTop, Math.max(0, room));
+    });
+  }
+  // - Jellyfin Enhanced's "Go to More with X, not in the library" jump link looked like stray bold text
+  //   with a thin blue outline: now a pill button like the others; the bio no longer spans the full width
+  var st = document.createElement('style');
+  st.textContent =
+    '.jellyseerr-join-jump{display:inline-block !important;padding:.55em 1.2em !important;border-radius:999px !important;border:0 !important;' +
+    'background:rgba(255,255,255,.08) !important;color:#d1d5db !important;font:inherit;font-size:.95em !important;font-weight:500 !important;cursor:pointer;outline:none !important;box-shadow:none !important;margin:.4em 0 1em !important}' +
+    '.jellyseerr-join-jump:hover,.jellyseerr-join-jump:focus{background:#d1d5db !important;color:#131414 !important}' +
+    '.jellyseerr-join-jump-go{font-weight:600}' +
+    '.detailSectionContent .overview{max-width:72em}';
+  document.head.appendChild(st);
+  // - Samsung/LG: OK on a "More with X" card (not in the library) only opened Jellyfin Enhanced's
+  //   overlay with a Request button one press away. OK now opens the title's page, like every other card.
+  if (TV) document.addEventListener('keydown', function (e) {
+    if (e.keyCode !== 13 && e.key !== 'Enter') return;
+    var a = document.activeElement, card = a && a.classList && a.classList.contains('jellyseerr-poster-image') && a.closest('.jellyseerr-card');
+    var link = card && card.querySelector('.jellyseerr-more-info-link');
+    if (!link) return;
+    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+    link.click();
+  }, true);
 })();
 
 // Jellyfin Enhanced's settings panel (a plugin page):
@@ -2343,6 +2398,26 @@ window.IvfWebLoaded = true;
     e.preventDefault(); e.stopPropagation();
     location.hash = prof.getAttribute('href').replace(/^#/, '');
   }, true);
+})();
+
+// Web: Esc = Back on the pages that had none (round-7 beta: library grids, Settings and the video player
+// ignored Esc while film pages, Search and Music already used it). Runs last (bubble phase), so a page
+// or dialog that handles Esc itself wins; never while typing, in a dialog or on Home.
+(function () {
+  if (typeof tizen !== 'undefined' || !!window.PalmSystem) return;
+  window.addEventListener('keydown', function (e) {
+    if (e.defaultPrevented || !(e.key === 'Escape' || e.keyCode === 27) || e.ctrlKey || e.altKey || e.metaKey) return;
+    var t = e.target;
+    if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || '') || t.isContentEditable)) return;
+    if (document.fullscreenElement) return; // the browser's own Esc leaves full screen first
+    if (document.querySelector('.dialogContainer .dialog, .je-more-info-modal, .jellyseerr-season-modal, #jellyfin-enhanced-panel, .ivf-dlg-on')) return;
+    var h = location.hash || '';
+    // (Music, Search, Discover and film/show pages handle Esc themselves)
+    if (!/^#\/(movies|tv|list|livetv|collections|video|mypreferences|userprofile|playbackconfiguration|subtitles|dashboard|settings|preferences)/.test(h)) return;
+    if (document.documentElement.classList.contains('ivf-music-on')) return;
+    e.preventDefault();
+    history.back();
+  });
 })();
 
 } catch (e) { console.error('IvanaFin script home-grid failed:', e); } })();
@@ -2696,7 +2771,7 @@ window.IvfWebLoaded = true;
     var s = document.createElement('style');
     s.id = STYLE_ID;
     s.textContent = [
-      ':root{--ivf-dp:calc(100vw / 960)}',
+      ':root{--ivf-dp:calc(100vw / 960)}@media (max-width:760px) and (orientation:portrait){:root{--ivf-dp:calc(100vw / 280)}}@media (max-height:500px) and (orientation:landscape){:root{--ivf-dp:calc(100vw / 640)}}',
       // Jellyfin's loading circle is for its own page loading underneath ours: never shown over a film
       'html.ivf-movie-on .docspinner{display:none !important}',
       // Jellyfin's own film page underneath is not laid out at all (its rows measuring themselves made
@@ -2765,7 +2840,7 @@ window.IvfWebLoaded = true;
       '.ivf-mv-row h3{margin:0 0 0 ' + d(40) + ';font-size:' + d(22) + ';font-weight:400;line-height:' + d(28) + ';color:#d1d5db}',
       '.ivf-mv-strip{display:flex;gap:' + d(16) + ';overflow-x:auto;overflow-y:hidden;scrollbar-width:none;padding:' + d(16) + ' ' + d(40) + ' ' + d(8) + ';scroll-behavior:smooth;align-items:flex-start}',
       '.ivf-mv-strip::-webkit-scrollbar{display:none}',
-      '.ivf-mv-row:not(.cast):not(.sw-planet):not(.sw-char) .ivf-mv-strip{padding-left:' + d(48) + '}',
+      '.ivf-mv-row:not(.cast):not(.sw-planet):not(.sw-char) .ivf-mv-strip{padding-left:' + d(40) + '} /* round 7: cards line up with their heading (was 48) */',
       '.ivf-mv-item{flex:none;display:flex;flex-direction:column;align-items:center;background:none;border:0;padding:0;color:#d1d5db;font:inherit;cursor:pointer;outline:none}',
       // Cast & Crew (PersonCard: 108dp circle, name 14sp semi-bold, role 12sp, one line each)
       '.ivf-mv-person{width:' + d(108) + '}',
@@ -2840,7 +2915,19 @@ window.IvfWebLoaded = true;
       '.ivf-mv-btns:hover .ivf-mv-btn:focus:not(:hover) .lbl,.ivf-mv-btn:focus:not(:focus-visible):not(:hover) .lbl{max-width:0;padding:0}',
       '.ivf-mv-item:focus:not(:focus-visible):not(:hover) .ivf-mv-face,.ivf-mv-item:focus:not(:focus-visible):not(:hover) .pic{box-shadow:none;transform:none}',
       '.ivf-mv-wide:focus:not(:focus-visible):not(:hover){box-shadow:none;transform:none}',
-      '.ivf-mv-ov:focus:not(:focus-visible):not(:hover){background:none}'
+      '.ivf-mv-ov:focus:not(:focus-visible):not(:hover){background:none}',
+      // Phone (2026-11-22, user: the Jellyfin phone app loads these pages): narrow margins, the tagline
+      // may wrap, lists and the crawl fit the screen
+      '@media (max-width:760px) and (orientation:portrait){',
+      '.ivf-mv-head{padding-left:16px;padding-right:16px}',
+      '.ivf-mv-logo{max-width:100%}',
+      '.ivf-mv-title{max-width:100%}',
+      '.ivf-mv-tag{white-space:normal}',
+      '.ivf-mv-row h3{margin-left:16px}',
+      '.ivf-mv-strip,.ivf-mv-row:not(.cast):not(.sw-planet):not(.sw-char) .ivf-mv-strip{padding-left:16px;padding-right:16px}',
+      '.ivf-mv-box{width:92vw}',
+      '.ivf-crawl-text{width:90vw;margin-left:-45vw}',
+      '}'
     ].join(''));
     document.head.appendChild(s);
   }
@@ -3062,6 +3149,8 @@ window.IvfWebLoaded = true;
       if (kind === 'subs') sub = [s.Title || '', codecName(s.Codec), s.IsExternal ? 'External' : '', s.IsDefault ? '(Default)' : ''].filter(Boolean).join(' · ');
       return { value: String(s.Index), head: head || s.DisplayTitle || 'Track ' + s.Index, sub: sub };
     });
+    var seenH = {}; // identical entries (untitled tracks in one language): number the repeats
+    opts.forEach(function (o) { var k = o.head + '|' + o.sub; seenH[k] = (seenH[k] || 0) + 1; if (seenH[k] > 1) o.head += ' (' + seenH[k] + ')'; });
     if (kind === 'subs') opts.unshift({ value: '-1', head: 'None', sub: '' });
     if (!chosen) {
       var def = streams.filter(function (s) { return s.Index === (kind === 'audio' ? src.DefaultAudioStreamIndex : src.DefaultSubtitleStreamIndex); })[0];
@@ -3094,9 +3183,13 @@ window.IvfWebLoaded = true;
     var it = cur.item, h = '';
     (it.MediaSources || []).forEach(function (src) {
       h += '<b>' + esc(it.Name) + '</b><span>' + esc([src.Name && src.Name !== it.Name ? src.Name : '', (src.Container || '').toUpperCase(), src.Size ? (src.Size / 1073741824).toFixed(2) + ' GB' : '', src.Bitrate ? Math.round(src.Bitrate / 1e6) + ' Mbps' : ''].filter(Boolean).join(' · ')) + '</span>';
+      // (round 7: files often hold several untitled tracks per language - number the repeats)
+      var seen = {};
       (src.MediaStreams || []).forEach(function (s) {
         if (s.Type !== 'Video' && s.Type !== 'Audio' && s.Type !== 'Subtitle') return;
-        h += '<b>' + s.Type + '</b><span>' + esc(s.DisplayTitle || '') + '</span><span>' + esc([(s.Codec || '').toUpperCase(), s.Profile && s.Profile !== 'Unknown' ? s.Profile : '', s.Width ? s.Width + 'x' + s.Height : '', s.VideoRangeType && s.VideoRangeType !== 'SDR' ? s.VideoRangeType : '', s.ChannelLayout, s.BitRate ? Math.round(s.BitRate / 1000) + ' kbps' : '', s.Language].filter(Boolean).join(' · ')) + '</span>';
+        var dt = s.DisplayTitle || '', key = s.Type + '|' + dt; seen[key] = (seen[key] || 0) + 1;
+        if (seen[key] > 1) dt += ' (' + seen[key] + ')';
+        h += '<b>' + s.Type + '</b><span>' + esc(dt) + '</span><span>' + esc([(s.Codec || '').toUpperCase(), s.Profile && s.Profile !== 'Unknown' ? s.Profile : '', s.Width ? s.Width + 'x' + s.Height : '', s.VideoRangeType && s.VideoRangeType !== 'SDR' ? s.VideoRangeType : '', s.ChannelLayout, s.BitRate ? Math.round(s.BitRate / 1000) + ' kbps' : '', s.Language].filter(Boolean).join(' · ')) + '</span>';
       });
     });
     var dlg = openDialog('<div class="ivf-mv-dtitle">Media Information</div><div class="ivf-mv-info" tabindex="-1">' + h + '</div>');
@@ -3268,6 +3361,9 @@ window.IvfWebLoaded = true;
       if (!h.getClientRects().length || getComputedStyle(h).visibility === 'hidden') return;
       b = Math.max(b, Math.round(h.getBoundingClientRect().bottom));
     });
+    // (round 7: measured while Jellyfin hid its bar for a page change = 0, and the fade under the bar was
+    // lost - text ran under the icons. Keep the last real height.)
+    try { if (b > 0) sessionStorage.setItem('ivf-hdr-h', b); else b = +sessionStorage.getItem('ivf-hdr-h') || 74; } catch (e) { if (!b) b = 74; }
     if (root.style.getPropertyValue('--ivf-mv-top') !== b + 'px') root.style.setProperty('--ivf-mv-top', b + 'px');
   }
   window.addEventListener('resize', placeBelowHeader);
@@ -3363,6 +3459,12 @@ window.IvfWebLoaded = true;
       var cards = stockPage() && stockPage().querySelectorAll('#scenesContent .card, .scenesContent .card');
       var c = cards && cards[+b.getAttribute('data-chapter')];
       if (c) (c.querySelector('[data-action]') || c).click();
+      else {
+        // Jellyfin builds no Scenes cards when chapter pictures are off (this server) - start the film at
+        // the chapter's time through Jellyfin's own player (round 7: clicking a scene did nothing)
+        var ch = (cur.item.Chapters || [])[+b.getAttribute('data-chapter')], pm = window.IvfMusic && window.IvfMusic.pm && window.IvfMusic.pm();
+        if (ch && pm) pm.play({ ids: [cur.item.Id], startPositionTicks: ch.StartPositionTicks || 0, serverId: ApiClient.serverId() });
+      }
     } else if (b.hasAttribute('data-extra')) {
       var ex = stockPage() && stockPage().querySelectorAll('#specialsContent .card, .specialsContent .card');
       var x = ex && ex[+b.getAttribute('data-extra')];
@@ -3499,7 +3601,7 @@ window.IvfWebLoaded = true;
     var s = document.createElement('style');
     s.id = 'ivf-music-style';
     var css = [
-      ':root{--ivf-dp:calc(100vw / 960)}',
+      ':root{--ivf-dp:calc(100vw / 960)}@media (max-width:760px) and (orientation:portrait){:root{--ivf-dp:calc(100vw / 280)}}@media (max-height:500px) and (orientation:landscape){:root{--ivf-dp:calc(100vw / 640)}}',
       // Jellyfin's own now-playing bar never shows (ours replaces it in Music; outside Music nothing plays)
       '.appfooter{visibility:hidden !important;pointer-events:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important}',
       // Jellyfin's own pages underneath are never seen: don't let the TV keep drawing them
@@ -3541,6 +3643,9 @@ window.IvfWebLoaded = true;
       R + '.top::after{content:"";flex:none;width:' + d(200) + '}',
       R + '.nv{display:flex;align-items:center;gap:' + d(7) + ';height:' + d(36) + ';padding:0 ' + d(10) + ';border-radius:999px;color:rgba(255,255,255,.6);font-size:' + d(12) + ';font-weight:500}',
       R + '.nv .material-icons{font-size:' + d(18) + '}',
+      // (round 7: the tab names and Jellyfin's icons vanished over bright artist photos)
+      R + '.nv:not(:focus){text-shadow:0 1px ' + d(4) + ' rgba(0,0,0,.85)}' + R + '.nv:not(:focus) .material-icons{filter:drop-shadow(0 1px ' + d(2) + ' rgba(0,0,0,.85))}',
+      'html.ivf-music-on .skinHeader .headerButton,html.ivf-music-on header.MuiAppBar-root button{filter:drop-shadow(0 1px 3px rgba(0,0,0,.9))}',
       R + '.nv.on{color:#fff}',
       // ---- page ----
       // the selected item's picture sits in its own layer behind the page, so it stays put while the page scrolls
@@ -3584,7 +3689,9 @@ window.IvfWebLoaded = true;
       'text-shadow:0 1px 3px rgba(0,0,0,.85)}' + R + '.cd .o>span{overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}',
       R + '.cd.on .o{color:' + GREEN + '}',
       R + '.cd.ar .p{border-radius:50%}',
-      R + '.cd.ar .o{position:static;background:none;text-align:center;padding:' + d(6) + ' 0 0;font-weight:500;text-shadow:none}',
+      R + '.cd.ar .o{position:static;background:none;text-align:center;padding:' + d(14) + ' 0 0;font-weight:500;text-shadow:none}',
+      // (round 7: the selected circle grows and its ring covered the name; long names stay on one line)
+      R + '.cd.ar .o span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
       // Your Library grid
       R + '.lt{position:relative;display:flex;align-items:center;gap:' + d(10) + ';padding:' + d(110) + ' ' + d(40) + ' ' + d(14) + '}',
       // Sort by list under the sort chip
@@ -3613,7 +3720,7 @@ window.IvfWebLoaded = true;
       R + '.bw .p.liked{background:linear-gradient(135deg,#450af5,#c4efd9);display:flex;align-items:center;justify-content:center}' + R + '.bw .p.liked .material-icons{font-size:' + d(30) + ';transform:rotate(-25deg)}',
       R + '.bw:hover{filter:brightness(1.12)}' + R + '.bw:focus{box-shadow:0 0 0 ' + d(3) + ' #fff}',
       R + '.bvh{padding:' + d(110) + ' ' + d(40) + ' ' + d(14) + '}' + R + '.bvh .k{font-size:' + d(11) + ';font-weight:700;color:rgba(255,255,255,.75)}' + R + '.bvh h1{font-size:' + d(MU_TYPE.hero) + ';font-weight:800;margin-top:' + d(2) + '}',
-      R + '.cd .ln{display:block;margin-top:' + d(6) + ';font-size:' + d(11) + ';font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      R + '.cd .ln{display:block;margin-top:' + d(10) + '; /* round 7: room for the grown cover ring */ font-size:' + d(11) + ';font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
       R + '.cd .ls{display:block;font-size:' + d(MU_TYPE.label) + ';color:rgba(255,255,255,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
       R + '.cd.ar .ln,' + R + '.cd.ar .ls{text-align:center}',
       R + '.cd.on .ln{color:' + GREEN + '}',
@@ -3665,9 +3772,9 @@ window.IvfWebLoaded = true;
       R + '.about h2{font-size:' + d(16) + ';color:#fff;margin-bottom:' + d(6) + '}',
       R + '.about p{margin:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical}',
       // artist page: Popular (5 rows until See more), About card (photo + bio, select to read it all)
-      R + '.pop{margin:' + d(18) + ' ' + d(30) + ' 0}' + R + '.pop h2{font-size:' + d(16) + ';color:#fff;margin:0 0 ' + d(6) + ' ' + d(10) + '}',
+      R + '.pop{margin:' + d(18) + ' 0 0}' + R + '.pop h2{font-size:' + d(16) + ';color:#fff;margin:0 0 ' + d(6) + ' ' + d(40) + '}',
       R + '.pop.cl .tr:nth-child(n+6){display:none}',
-      R + '.pop .bt.sm{margin:' + d(6) + ' 0 0 ' + d(10) + '}',
+      R + '.pop .bt.sm{margin:' + d(6) + ' 0 0 ' + d(40) + '}',
       R + '.about{max-width:none}',
       R + '.abt{display:flex;gap:' + d(20) + ';width:' + d(760) + ';max-width:100%;padding:' + d(16) + ';border:0;border-radius:' + d(8) + ';background:#242424;color:inherit;font:inherit;text-align:left;cursor:pointer;outline:none}',
       R + '.abt:focus-visible,' + R + '.abt:hover{box-shadow:0 0 0 ' + d(2) + ' #fff}',
@@ -3753,7 +3860,7 @@ window.IvfWebLoaded = true;
       // (the picture box gets its height from padding, so the four covers are placed absolutely)
       R + '.mx .p{overflow:hidden}' + R + '.mx .p i{position:absolute;left:0;top:0;width:50%;height:50%;background:#333 center/cover no-repeat}',
       R + '.mx .p i:nth-child(2){left:50%}' + R + '.mx .p i:nth-child(3){top:50%}' + R + '.mx .p i:nth-child(4){left:50%;top:50%}',
-      R + '.mx .mt{position:absolute;left:0;right:0;top:0;padding:' + d(8) + ';font-size:' + d(MU_TYPE.card) + ';line-height:1.2;font-weight:700;text-shadow:0 1px ' + d(3) + ' rgba(0,0,0,.85);padding-bottom:' + d(18) + ';background:linear-gradient(rgba(0,0,0,.82),rgba(0,0,0,.55) 55%,transparent); /* round 5: names over busy covers */z-index:1}',
+      R + '.mx .mt{position:absolute;left:0;right:0;top:0;padding:' + d(8) + ';font-size:' + d(MU_TYPE.card) + ';line-height:1.2;font-weight:700;text-shadow:0 1px ' + d(3) + ' rgba(0,0,0,.85);padding-bottom:' + d(22) + ';background:linear-gradient(rgba(0,0,0,.9),rgba(0,0,0,.78) 60%,transparent); /* round 5+7: names over busy covers */z-index:1}',
       R + '.mx .ls{display:block;margin-top:' + d(6) + ';font-size:' + d(MU_TYPE.label) + ';color:rgba(255,255,255,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
       // ---- Now Playing (plan part 2) ----
       // moving background (Apple Music style, user: colour blur only): a tiny copy of the cover
@@ -3831,7 +3938,7 @@ window.IvfWebLoaded = true;
       R + '.top::before{display:none}',
       // web: the mouse selects; a click's leftover focus doesn't stay outlined
       R + '.fx:focus:not(:focus-visible){box-shadow:none}',
-      R + '.nv:hover{color:#fff}' + R + '.nv:focus:not(:focus-visible){background:none;color:rgba(255,255,255,.6)}' + R + '.nv.on:focus:not(:focus-visible){color:#fff}',
+      R + '.nv:focus-visible{background:#fff;color:#000;box-shadow:none}' + R + '.nv:hover{color:#fff}' + R + '.nv:focus:not(:focus-visible){background:none;color:rgba(255,255,255,.6)}' + R + '.nv.on:focus:not(:focus-visible){color:#fff}',
       R + '.sc:hover{filter:brightness(1.22)}' + R + '.mini:hover{filter:brightness(1.15)}',
       R + '.cd:hover .p{box-shadow:0 0 0 ' + d(2) + ' ' + BG + ',0 0 0 ' + d(4) + ' #fff}' + R + '.cd:focus:not(:focus-visible) .p{box-shadow:none}' + R + '.cd:hover:focus .p{box-shadow:0 0 0 ' + d(2) + ' ' + BG + ',0 0 0 ' + d(4) + ' #fff}',
       // the lift follows the mouse on the web (a click's leftover focus doesn't keep a card grown)
@@ -3849,6 +3956,24 @@ window.IvfWebLoaded = true;
       R + '.npbar{cursor:pointer}' + R + '.npbar:hover i{height:' + d(5) + ';margin-top:' + d(-2.5) + '}' + R + '.npbar:hover b{background:' + GREEN + '}',
       // (the About the artist card opens the artist's page)
       R + '.abc:focus:not(:focus-visible){box-shadow:none}' + R + '.abc:hover{box-shadow:0 0 0 ' + d(2) + ' #fff}'
+    ]);
+    // Phone (2026-11-22): 16px side margins, tabs left-aligned with no spacer, the album cover smaller
+    // with the title below it, 2 shortcut columns
+    if (!TV) css = css.concat([
+      '@media (max-width:760px) and (orientation:portrait){',
+      [' .top', ' .hero', ' .sg', ' .row h2', ' .lh', ' .strip', ' .gd', ' .acts', ' .about', ' .bvh', ' .bwg', ' .bwh', ' .empty', ' .lt', ' .sbox', ' .sortm']
+        .map(function (c) { return R.trim() + c; }).join(',') + '{padding-left:16px !important;padding-right:16px !important}',
+      R + '.top::after{display:none}',
+      R + '.top{flex-wrap:wrap;height:auto;gap:8px}',
+      R + '.mini{width:100%;order:2}',
+      R + '.nav{justify-content:flex-start;gap:4px}',
+      R + '.hero{max-width:none;min-height:0;padding-bottom:16px}',
+      R + '.hart{width:100%}',
+      R + '.hart.sq{width:42vw;height:42vw;right:16px;top:calc(var(--ivf-mu-hd,0px) + 64px)}',
+      '#' + ROOT_ID + ':has(.hart.sq) .hero{padding-top:calc(42vw + 80px)}',
+      R + '.sg{grid-template-columns:repeat(2,minmax(0,1fr))}',
+      R + '.pop{margin-left:0;margin-right:0}' + R + '.pop h2{margin-left:16px}' + R + '.pop .tl,' + R + '.tl{padding-left:6px;padding-right:6px}',
+      '}'
     ]);
     s.textContent = css.join('');
     document.head.appendChild(s);
@@ -4538,7 +4663,19 @@ window.IvfWebLoaded = true;
       ApiClient.getJSON(ApiClient.getUrl('/Artists/AlbumArtists', { ParentId: lib.id, userId: uid(), SearchTerm: term, Limit: 20, ImageTypeLimit: 1, EnableImageTypes: 'Primary,Backdrop' })).then(function (r) { return (r && r.Items) || []; }, function () { return []; }),
       getItems({ ParentId: lib.id, IncludeItemTypes: 'Audio', Recursive: true, SearchTerm: term, Limit: 30, Fields: 'RunTimeTicks' })
     ]).then(function (r) {
-      if (t !== viewToken) return;
+      // Jellyfin only matches names: 'radiohead' found the artist but none of its albums or songs
+      // (round 7). Add the matched artists' own albums and songs after the name matches.
+      var ids = r[1].slice(0, 3).map(function (x) { return x.Id; }).join(',');
+      if (!ids || t !== viewToken) return r;
+      return Promise.all([
+        getItems(q({ AlbumArtistIds: ids, Limit: 30 })),
+        getItems({ ParentId: lib.id, IncludeItemTypes: 'Audio', Recursive: true, ArtistIds: ids, SortBy: 'PlayCount,SortName', SortOrder: 'Descending', Limit: 30, Fields: 'RunTimeTicks' })
+      ]).then(function (x) {
+        function add(list, more) { var seen = {}; list.forEach(function (i) { seen[i.Id] = 1; }); return list.concat(more.filter(function (i) { return !seen[i.Id] && (seen[i.Id] = 1); })).slice(0, 30); }
+        return [add(r[0], x[0]), r[1], add(r[2], x[1])];
+      }, function () { return r; });
+    }).then(function (r) {
+      if (!r || t !== viewToken) return;
       view.data = { tracks: r[2] };
       // Artists and Albums first, then the songs (round-5 beta: below up to 30 songs they were never seen)
       var h = row('Artists', r[1].map(artistCard).join('')) + row('Albums', r[0].map(card).join(''));
@@ -4571,8 +4708,8 @@ window.IvfWebLoaded = true;
       if (b.liked) { cls += ' liked'; c = icon('favorite'); }
       else if (b.items) {
         var by = b.items.filter(function (a) { return a.ImageTags && a.ImageTags.Primary; }).sort(function (x, y) { return (y.ProductionYear || 0) - (x.ProductionYear || 0); });
-        var a0 = by.filter(function (a) { return !used[a.Id]; })[0] || by[0];
-        if (a0) { used[a0.Id] = 1; pic = cover(a0, 160); }
+        var a0 = by.filter(function (a) { return !used[a.Id] && !used[a.ImageTags.Primary]; })[0] || by[0];
+        if (a0) { used[a0.Id] = used[a0.ImageTags.Primary] = 1; pic = cover(a0, 160); } // (by picture too: Bully and BULLY EP share a cover)
       }
       else if (b.artists) { cls += ' ar'; var a = b.artists[0]; pic = a.ImageTags && a.ImageTags.Primary ? imgUrl(a.Id, 'Primary', { maxWidth: 160, tag: a.ImageTags.Primary }) : ''; }
       return '<button type="button" class="fx bw" data-k="browse:' + b.k + '" style="--bwc:' + huePal(b.hue).tile + '"><span>' + esc(b.name) + '</span><span class="' + cls + '"' + bgi(pic) + '>' + c + '</span></button>';
@@ -5128,8 +5265,12 @@ window.IvfWebLoaded = true;
   function openArtistFromNow() {
     var id = shownState && shownState.artistId;
     if (!id) return;
+    var from = npReturn && page.contains(npReturn) ? npReturn : null;
     npOpen = false; np.classList.remove('on'); npReturn = null;
     go({ v: 'artist', arg: id }, 'nohist');
+    // Back from this artist: select the card/row that started the music (round 7: the focus was in
+    // Now Playing, so nothing was remembered and Music Home selected its first card)
+    if (from && stack.length && !stack[stack.length - 1].focusKey) stack[stack.length - 1].focusKey = keyOf(from);
   }
   function closeNow() {
     npOpen = false;
@@ -5139,7 +5280,10 @@ window.IvfWebLoaded = true;
     moveJfHeader(page.scrollTop);
     var m = topEl.querySelector('.mini'), r = npReturn;
     npReturn = null;
-    // opened by starting a song: back to that song's row (or the button that started it)
+    // opened by starting a song: back to that song's row (or the button that started it); if the
+    // music has moved on to another song of this list, that song's row (round 7, LG)
+    var cur = page.querySelector('.tr.on');
+    if (cur && (!r || !page.contains(r) || r.classList.contains('tr'))) r = cur;
     if (r && page.contains(r)) { if (TV) focusEl(r); return; }
     if (TV) { if (!m.classList.contains('off')) focusEl(m); else focusDefault(); }
   }
@@ -5489,10 +5633,17 @@ window.IvfWebLoaded = true;
     var top = 0;
     Array.prototype.forEach.call(document.querySelectorAll('.skinHeader, header.MuiAppBar-root'), function (h) {
       if (!h.getClientRects().length || getComputedStyle(h).visibility === 'hidden') return;
+      if (h.style.transform) return; // moved up with a scrolled page: not its real height
       top = Math.max(top, Math.round(h.getBoundingClientRect().bottom));
     });
+    // Jellyfin hides its bar for a moment while a page changes: measuring then gave 0 and the whole
+    // page dropped ~74 px a moment later (round 7). Keep the last real height instead.
+    if (top > 0) { lastHd = top; try { sessionStorage.setItem('ivf-mu-hd', top); } catch (e) {} }
+    else top = lastHd;
     root.style.setProperty('--ivf-mu-hd', top + 'px');
   }
+  var lastHd = 0; try { lastHd = +sessionStorage.getItem('ivf-mu-hd') || 0; } catch (e) {}
+  if (!lastHd && !TV) lastHd = 74; // Desktop (legacy) bar height at 1080p, until the first real measurement
   window.addEventListener('resize', measure);
   var barTimer = null, homeHash = null;
   function open(albumId) {
@@ -5734,6 +5885,31 @@ window.IvfWebLoaded = true;
   window.addEventListener('hashchange', function () { setTimeout(check, 0); });
   document.addEventListener('viewshow', function () { setTimeout(check, 0); });
   check();
+})();
+
+// Remote media keys in Music (round-7 beta, LG: Play/Pause on the remote did nothing on Now Playing).
+// Handled here, before Jellyfin, so they work whatever the TV's browser does with them:
+// Play 415 / Pause 19 / Play-Pause 10252 (Samsung) or 179 / Stop 413 / Next 417 (FF) / Previous 412 (REW)
+(function () {
+  window.addEventListener('keydown', function (e) {
+    var M = window.IvfMusic, root = document.getElementById('ivf-music');
+    if (!M || !root || root.classList.contains('ivf-off')) return;
+    var k = e.keyCode, key = e.key || '';
+    var act = k === 415 || key === 'MediaPlay' ? 'play' : k === 19 || key === 'MediaPause' || key === 'Pause' ? 'pause'
+      : k === 10252 || k === 179 || key === 'MediaPlayPause' ? 'pp' : k === 413 || key === 'MediaStop' ? 'stop' : '';
+    if (!act) return;
+    var m = M.pm && M.pm(), p = m && m.getCurrentPlayer && m.getCurrentPlayer();
+    if (!m || !p) return;
+    e.preventDefault(); e.stopPropagation(); if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+    var s = M.state && M.state(), playing = !!(s && s.playing);
+    try {
+      if (act === 'play') { if (!playing) m.playPause(p); }
+      else if (act === 'pause') { if (playing) m.playPause(p); }
+      else if (act === 'pp') m.playPause(p);
+      else if (act === 'stop') m.stop(p);
+    } catch (x) {}
+    if (M.refresh) setTimeout(M.refresh, 150);
+  }, true);
 })();
 
 } catch (e) { console.error('IvanaFin script music-page failed:', e); } })();
@@ -6091,7 +6267,7 @@ window.IvfWebLoaded = true;
     var s = document.createElement('style');
     s.id = STYLE_ID;
     s.textContent = [
-      ':root{--ivf-dp:calc(100vw / 960)}',
+      ':root{--ivf-dp:calc(100vw / 960)}@media (max-width:760px) and (orientation:portrait){:root{--ivf-dp:calc(100vw / 280)}}@media (max-height:500px) and (orientation:landscape){:root{--ivf-dp:calc(100vw / 640)}}',
       // No "press" shrink when choosing a poster/card (ElegantFin: .emby-button:active scale(.98),
       // .cardScalable:active scale(1)); the focus grow stays
       '.card:active,.card.emby-button:active{transform:none !important;filter:none !important}',
@@ -6166,7 +6342,20 @@ window.IvfWebLoaded = true;
       L + '.page:not(.hide).libraryPage .itemsContainer .cardText-first{font-size:calc(' + d + ' * 14) !important;line-height:calc(' + d + ' * 20) !important;font-weight:600 !important;letter-spacing:calc(' + d + ' * 0.25) !important;opacity:1}',
       // no extra side padding from the page/tab wrappers around the grid
       L + '.page:not(.hide).libraryPage .pageTabContent,' + L + '.page:not(.hide).libraryPage .padded-left{padding-left:0 !important}',
-      L + '.page:not(.hide).libraryPage .pageTabContent,' + L + '.page:not(.hide).libraryPage .padded-right{padding-right:0 !important}'
+      L + '.page:not(.hide).libraryPage .pageTabContent,' + L + '.page:not(.hide).libraryPage .padded-right{padding-right:0 !important}',
+      // Jellyfin's newer (phone app) layout keeps room for its top bar twice on library pages it draws itself
+      // (e.g. a mixed library): above the page AND inside it - a big empty band over the posters (user 2026-11-22)
+      TV ? '' : 'body:has(header.MuiAppBar-root) .page.libraryPage.pageWithAbsoluteTabs:not(.hide){padding-top:12px !important}',
+      // Phone app layout (2026-11-22, user): no second bar with the library name and page arrows on
+      // IvanaFin libraries with one page (a big library keeps it: its arrows change page) - the posters start under the top bar (its spacer follows the bar's height)
+      TV ? '' : L + 'header.MuiAppBar-root:not(:has(button[title="Next"]:not(:disabled))):not(:has(button[title="Previous"]:not(:disabled))) > .MuiToolbar-root ~ .MuiToolbar-root{display:none !important}' + L + 'header.MuiAppBar-root:not(:has(button[title="Next"]:not(:disabled))):not(:has(button[title="Previous"]:not(:disabled))) + div[style*="height"]{height:48px !important}',
+      // Phone (2026-11-22): 3 posters per row, 12px apart, 16px from the edges
+      '@media (max-width:760px) and (orientation:portrait){',
+      L + '.page:not(.hide).libraryPage .itemsContainer.vertical-wrap{padding-left:16px !important;padding-right:16px !important;column-gap:12px !important;row-gap:18px !important}',
+      L + '.page:not(.hide).libraryPage .itemsContainer.vertical-wrap > .card{width:calc((100% - 24px) / 3) !important;flex:0 0 calc((100% - 24px) / 3) !important}',
+      L + '.page:not(.hide).libraryPage .itemsContainer .cardText{font-size:12px !important;line-height:16px !important}',
+      L + '.page:not(.hide).libraryPage .itemsContainer .cardText-first{font-size:13px !important;line-height:18px !important}',
+      '}'
     ].join('');
     document.head.appendChild(s);
   }
@@ -6418,7 +6607,7 @@ window.IvfWebLoaded = true;
     var s = document.createElement('style');
     s.id = STYLE_ID;
     s.textContent = [
-      ':root{--ivf-dp:calc(100vw / 960)}',
+      ':root{--ivf-dp:calc(100vw / 960)}@media (max-width:760px) and (orientation:portrait){:root{--ivf-dp:calc(100vw / 280)}}@media (max-height:500px) and (orientation:landscape){:root{--ivf-dp:calc(100vw / 640)}}',
       TV ? 'html.ivf-search-on .skinHeader{display:none !important}'
         // Web: the top bar is see-through - no Jellyfin backdrop behind it (it showed a different picture
         // above our page) and a plain black bar, like the web Home and Discover pages
@@ -6733,7 +6922,7 @@ window.IvfWebLoaded = true;
     var s = document.createElement('style');
     s.id = STYLE_ID;
     s.textContent = [
-      ':root{--ivf-dp:calc(100vw / 960)}',
+      ':root{--ivf-dp:calc(100vw / 960)}@media (max-width:760px) and (orientation:portrait){:root{--ivf-dp:calc(100vw / 280)}}@media (max-height:500px) and (orientation:landscape){:root{--ivf-dp:calc(100vw / 640)}}',
       // Jellyfin's page underneath is never seen: no loading circle over ours either
       'html.ivf-show-on .docspinner{display:none !important}',
       // ...and not laid out at all (its rows measuring themselves cost time on the Samsung)
@@ -6807,18 +6996,20 @@ window.IvfWebLoaded = true;
       '.ivf-ep-img{position:relative;width:100%;padding-top:56.25%;border-radius:' + dd(4) + ';background:#151515 center/cover no-repeat;background-clip:padding-box;',
       'border:' + dd(1.5) + ' solid transparent;box-sizing:border-box;transition:transform .12s,border-color .12s}',
       '.ivf-ep:hover .ivf-ep-img,.ivf-ep:focus .ivf-ep-img{transform:scale(1.06);border-color:#fff}',
+      // (round 7: the last card's grown picture and ring ran past the page's right edge; the first past the left)
+      '.ivf-ep:nth-child(4n) .ivf-ep-img{transform-origin:100% 50%}.ivf-ep:nth-child(4n+1) .ivf-ep-img{transform-origin:0 50%}',
       '.ivf-ep-progress{position:absolute;left:0;right:0;bottom:0;height:' + dd(4) + ';background:rgba(255,255,255,.25);',
       'border-radius:0 0 ' + dd(2.5) + ' ' + dd(2.5) + ';overflow:hidden}',
       '.ivf-ep-progress div{height:100%;background:#d1d5db}',
       '.ivf-ep-title{letter-spacing:' + dd(0.1) + ';margin-top:' + dd(4) + ';font-size:' + dd(14) + ';font-weight:600;line-height:1.3;color:#d1d5db}',
       '.ivf-ep-meta{font-weight:400;letter-spacing:' + dd(0.4) + ';display:flex;flex-wrap:wrap;align-items:center;column-gap:' + dd(14) + ';row-gap:' + dd(2) + ';font-size:' + dd(12) + ';color:#d1d5db}',
       '.ivf-ep-meta > span{white-space:nowrap}','.ivf-ep-overview + .ivf-ep-meta{margin-top:' + dd(4) + '}',
-      '.ivf-ep-meta .material-icons{font-size:' + dd(14) + ';color:#00A4DC;margin-right:' + dd(4) + ';vertical-align:middle}',
+      '.ivf-ep-meta .material-icons{font-size:' + dd(14) + ';color:#f5c518; /* round 7: gold like the show rating (was Jellyfin blue) */ margin-right:' + dd(4) + ';vertical-align:middle}',
       '.ivf-ep-overview{font-weight:400;letter-spacing:' + dd(0.4) + ';font-size:' + dd(12) + ';line-height:' + dd(16) + ';color:#9ca3af;overflow-wrap:anywhere;padding-right:' + dd(4) + ';box-sizing:border-box}' /* round 5: lines ran past the card edge */,
       // Cast & Crew (film page's PersonCard: 108dp circle, name 14sp semi-bold, role 12sp, one line each)
       '.ivf-tvs-cast{margin-top:' + dd(24) + '}',
       '.ivf-tvs-cast h3{margin:0 0 ' + d(8) + ';font-size:' + d(22) + ';font-weight:400;line-height:' + d(28) + ';color:#d1d5db}',
-      '.ivf-tvs-strip{display:flex;gap:' + d(16) + ';overflow-x:auto;overflow-y:hidden;scrollbar-width:none;padding:' + d(8) + ' ' + d(8) + ';margin:0 -' + d(8) + ';align-items:flex-start}',
+      '.ivf-tvs-strip{display:flex;gap:' + d(16) + ';overflow-x:auto;overflow-y:hidden;scrollbar-width:none;padding:' + d(8) + ' ' + d(8) + ';margin:0 ' + d(-8) + '; /* round 7: "-calc()" was invalid CSS, so the cards sat 12px right of their heading */ align-items:flex-start}',
       '.ivf-tvs-strip::-webkit-scrollbar{display:none}',
       '.ivf-tvs-person{flex:none;width:' + d(108) + ';display:flex;flex-direction:column;align-items:center;background:none;border:0;padding:0;color:#d1d5db;font:inherit;cursor:pointer;outline:none}',
       '.ivf-tvs-face{width:100%;padding-top:100%;border-radius:50%;background:#1c1c1c center/cover no-repeat;position:relative;box-shadow:0 0 0 ' + d(1.5) + ' transparent;transition:transform .12s}',
@@ -6837,7 +7028,7 @@ window.IvfWebLoaded = true;
       '.ivf-tvs-wide .ivf-tvs-face{padding-top:56.25%;border-radius:' + d(6) + ';background-color:#050505;background-size:contain}',
       '.ivf-tvs-poster{width:' + d(124) + '}',
       '.ivf-tvs-poster .ivf-tvs-face{padding-top:150%;border-radius:' + d(4) + '}',
-      '.ivf-tvs-poster:focus .ivf-tvs-face{transform:scale(1.06)}',
+      '.ivf-tvs-poster:focus .ivf-tvs-face{transform:scale(1.06)}','.ivf-tvs-poster .ivf-tvs-face{transform-origin:50% 100%}', // (round 7: the grown poster covered its title - it now grows upward from its bottom edge)
       // Season picker dialog (like IvanaFin's DialogPopup)
       '.ivf-dialog{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center}',
       '.ivf-dialog-box{min-width:' + dd(300) + ';max-height:80vh;overflow:auto;padding:' + dd(16) + ';border-radius:' + dd(16) + ';background:#000;',
@@ -6862,7 +7053,23 @@ window.IvfWebLoaded = true;
       '.ivf-ep:hover .ivf-ep-img,.ivf-ep:focus .ivf-ep-img{transform:none}',
       '.ivf-ep:focus:not(:focus-visible):not(:hover) .ivf-ep-img{border-color:transparent}',
       '.ivf-tvs-person:hover .ivf-tvs-face{box-shadow:0 0 0 ' + d(2) + ' #fff;transform:scale(1.1)}',
-      '.ivf-tvs-person:focus:not(:focus-visible):not(:hover) .ivf-tvs-face{box-shadow:none;transform:none}'
+      '.ivf-tvs-person:focus:not(:focus-visible):not(:hover) .ivf-tvs-face{box-shadow:none;transform:none}',
+      // Phone (2026-11-22): narrow margins; one episode per row - picture left, title and time beside
+      // it, the description underneath across the full width
+      '@media (max-width:760px) and (orientation:portrait){',
+      R + ' .ivf-tvs-scroll{padding-left:16px;padding-right:16px}',
+      '.ivf-tvs-head{padding:0}',
+      '.ivf-logo img{max-width:100%}',
+      '.ivf-ep-grid{grid-template-columns:minmax(0,1fr);row-gap:20px}',
+      '.ivf-ep{display:grid;grid-template-columns:44% minmax(0,1fr);grid-template-areas:"img title" "img meta" "ov ov";column-gap:12px;row-gap:4px;align-items:start}',
+      '.ivf-ep-img{grid-area:img}',
+      '.ivf-ep-title{grid-area:title;margin-top:0}',
+      '.ivf-ep-meta{grid-area:meta;margin-top:0}',
+      '.ivf-ep-overview{grid-area:ov;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}',
+      '.ivf-ep-overview + .ivf-ep-meta{margin-top:0}',
+      '.ivf-dialog-box{max-width:92vw;box-sizing:border-box}',
+      '.ivf-bar{gap:10px;width:100%}.ivf-pill{width:auto;flex:1 1 0;min-width:0;font-size:15px;min-height:42px}.ivf-pill .material-icons{font-size:20px}',
+      '}'
     ].join(''));
     document.head.appendChild(s);
   }
@@ -7279,6 +7486,9 @@ window.IvfWebLoaded = true;
       if (!h.getClientRects().length || getComputedStyle(h).visibility === 'hidden') return;
       b = Math.max(b, Math.round(h.getBoundingClientRect().bottom));
     });
+    // (round 7: measured while Jellyfin hid its bar for a page change = 0, and the fade under the bar was
+    // lost - text ran under the icons. Keep the last real height.)
+    try { if (b > 0) sessionStorage.setItem('ivf-hdr-h', b); else b = +sessionStorage.getItem('ivf-hdr-h') || 74; } catch (e) { if (!b) b = 74; }
     if (root.style.getPropertyValue('--ivf-tvs-top') !== b + 'px') root.style.setProperty('--ivf-tvs-top', b + 'px');
   }
   window.addEventListener('resize', placeBelowHeader);
@@ -7614,7 +7824,9 @@ window.IvfWebLoaded = true;
       '.ivf-pl-img{flex:none;width:' + d(170) + ';height:' + d(170) + ';border-radius:50%;background:#000 center/cover no-repeat}',
       '.ivf-pl.ship .ivf-pl-img{width:' + d(220) + ';height:' + d(150) + ';border-radius:' + d(10) + ';background-size:contain;background-color:#050505}',
       '.ivf-pl.char .ivf-pl-img{background-position:center top}',
-      '.ivf-pl-txt{flex:1;min-width:0}',
+      // (round 7: the window changed size with every planet as you moved Left/Right - one steady size, the hint line at its foot)
+      '.ivf-pl{min-height:' + d(400) + '}',
+      '.ivf-pl-txt{flex:1;min-width:0;display:flex;flex-direction:column}','.ivf-pl-foot{margin-top:auto !important}',
       '.ivf-pl-name{font-size:' + d(24) + ';line-height:' + d(30) + ';font-weight:600;color:#fff}',
       '.ivf-pl-facts{display:grid;grid-template-columns:auto 1fr;gap:' + d(2) + ' ' + d(12) + ';margin:' + d(8) + ' 0 ' + d(12) + ';font-size:' + d(12) + ';line-height:' + d(17) + '}',
       '.ivf-pl-facts dt{color:#9ca3af}',
@@ -7842,7 +8054,11 @@ window.IvfSwPlanets = {"version":"2026-11-19","credit":"Pictures: Wookieepedia (
       'letter-spacing:' + u(0.1) + ';cursor:pointer;outline:none}',
       '.ivf-swt-btn .material-icons{font-size:' + u(20) + ';color:inherit}',
       '.ivf-swt-btn:focus,.ivf-swt-btn:hover{background:#d1d5db;color:#131414}',
-      TV ? '' : '.ivf-swt-btn:focus:not(:focus-visible):not(:hover){background:rgba(14,14,14,.9);color:#d1d5db}'
+      TV ? '' : '.ivf-swt-btn:focus:not(:focus-visible):not(:hover){background:rgba(14,14,14,.9);color:#d1d5db}',
+      // phone app layout: the button alone in Jellyfin's second bar
+      TV ? '' : '.ivf-swt-tb{justify-content:center !important;min-height:52px !important}.ivf-swt-tb > :not(.ivf-swt-bar){display:none !important}' +
+        '.ivf-swt-tb .ivf-swt-bar{position:static;transform:none}.ivf-swt-tb .ivf-swt-btn{min-height:36px;padding:6px 16px;font-size:14px;line-height:20px;background:rgba(255,255,255,.12)}' +
+        '.ivf-swt-tb .ivf-swt-btn .material-icons{font-size:18px}body:has(.ivf-swt-tb) [class*="alphaPicker"]{display:none !important}'
     ].join('');
     document.head.appendChild(s);
   }
@@ -7857,7 +8073,7 @@ window.IvfSwPlanets = {"version":"2026-11-19","credit":"Pictures: Wookieepedia (
     var uid = ApiClient.getCurrentUserId(), sw = window.IvfSw;
     if (!sw) return Promise.resolve(null);
     function items(q) {
-      return ApiClient.getJSON(ApiClient.getUrl('/Users/' + uid + '/Items', Object.assign({ ParentId: id, Recursive: true, IncludeItemTypes: 'Movie,Series', Fields: 'ProviderIds', EnableImages: false, EnableUserData: false }, q)))
+      return ApiClient.getJSON(ApiClient.getUrl('/Users/' + uid + '/Items', Object.assign({ ParentId: id, Recursive: true, IncludeItemTypes: 'Movie,Series', Fields: 'ProviderIds,PremiereDate', EnableImages: false, EnableUserData: false }, q)))
         .then(function (r) { return (r && r.Items) || []; });
     }
     libs[id] = items({ SortBy: 'Random', Limit: 60 }).then(function (sample) {
@@ -7865,7 +8081,13 @@ window.IvfSwPlanets = {"version":"2026-11-19","credit":"Pictures: Wookieepedia (
       if (n < 3 || n < sample.length * 0.75) return null;
       return items({}).then(function (all) {
         var map = {};
-        all.forEach(function (it) { var pl = sw.place(it); if (pl) map[it.Id] = { key: pl.k, label: pl.year }; });
+        // release dates too: the page isn't always in release order (the phone app's layout sorts by name)
+        var dates = {};
+        Object.defineProperty(map, '_dates', { value: dates });
+        all.forEach(function (it) {
+          var pl = sw.place(it); if (pl) map[it.Id] = { key: pl.k, label: pl.year };
+          var t = it.PremiereDate ? Date.parse(it.PremiereDate) : NaN; if (!isNaN(t)) dates[it.Id] = t;
+        });
         return map;
       });
     })['catch'](function () { delete libs[id]; return null; });
@@ -7897,7 +8119,13 @@ window.IvfSwPlanets = {"version":"2026-11-19","credit":"Pictures: Wookieepedia (
     });
     var tl = mode() === 'timeline';
     var sorted = cards.slice().sort(function (a, b) {
-      if (!tl) return a._ivfIndex - b._ivfIndex;
+      if (!tl) {
+        var ta = data._dates && data._dates[a.getAttribute('data-id')], tb = data._dates && data._dates[b.getAttribute('data-id')];
+        if (ta != null && tb != null && ta !== tb) return ta - tb;
+        if (ta != null && tb == null) return -1;
+        if (tb != null && ta == null) return 1;
+        return a._ivfIndex - b._ivfIndex;
+      }
       var da = data[a.getAttribute('data-id')], db = data[b.getAttribute('data-id')];
       if (da && db) return da.key - db.key;
       if (da) return -1;
@@ -7924,8 +8152,9 @@ window.IvfSwPlanets = {"version":"2026-11-19","credit":"Pictures: Wookieepedia (
       var y = c.querySelector('.cardText-secondary, .cardText:not(.cardText-first)');
       if (!y) return;
       var d = data[c.getAttribute('data-id')];
-      // timeline: titles outside the story (extras) show no year; a no-break space keeps the row height
-      var want = tl ? (d && d.label ? d.label : ' ') : c._ivfYear;
+      // timeline: titles outside the story (extras, documentaries, Visions) say so - round 7: a blank
+      // line looked like missing data
+      var want = tl ? (d && d.label ? d.label : 'Not in the timeline') : c._ivfYear;
       if (want != null && y.textContent !== want) y.textContent = want;
     });
     // the Sort pill above the grid
@@ -7954,6 +8183,14 @@ window.IvfSwPlanets = {"version":"2026-11-19","credit":"Pictures: Wookieepedia (
       if (h.getBoundingClientRect().height > 0) head = h;
     });
     if (!head) return;
+    // Jellyfin's newer (phone app) layout: its second bar (library name, view, sort, filter, page arrows)
+    // becomes just this button, centred (user 2026-11-22)
+    var tb = head.matches('header.MuiAppBar-root') && head.querySelectorAll(':scope > .MuiToolbar-root')[1];
+    if (tb) {
+      if (bar.parentNode !== tb) tb.appendChild(bar);
+      tb.classList.add('ivf-swt-tb');
+      return;
+    }
     if (bar.parentNode !== head) head.appendChild(bar);
     var hr = head.getBoundingClientRect(), mid = 0;
     // the middle of the bar's round icon buttons (back arrow, menu, search, user...)
@@ -7971,11 +8208,12 @@ window.IvfSwPlanets = {"version":"2026-11-19","credit":"Pictures: Wookieepedia (
   function removeFromHeader() {
     if (TV) return;
     Array.prototype.forEach.call(document.querySelectorAll('.ivf-swt-bar'), function (b) { b.parentNode.removeChild(b); });
+    Array.prototype.forEach.call(document.querySelectorAll('.ivf-swt-tb'), function (t) { t.classList.remove('ivf-swt-tb'); });
   }
 
   function check() {
     if (typeof ApiClient === 'undefined' || !ApiClient.getCurrentUserId || !ApiClient.getCurrentUserId()) return;
-    if (!/^#\/(list|movies|tv)/.test(location.hash || '')) { removeFromHeader(); return; }
+    if (!/^#\/(list|movies|tv|mixed)/.test(location.hash || '')) { removeFromHeader(); return; }
     var id = hashLib();
     if (!id) { removeFromHeader(); return; }
     load(id).then(function (map) {

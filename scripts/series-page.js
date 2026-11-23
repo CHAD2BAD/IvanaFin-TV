@@ -41,7 +41,7 @@
     var s = document.createElement('style');
     s.id = STYLE_ID;
     s.textContent = [
-      ':root{--ivf-dp:calc(100vw / 960)}',
+      ':root{--ivf-dp:calc(100vw / 960)}@media (max-width:760px) and (orientation:portrait){:root{--ivf-dp:calc(100vw / 280)}}@media (max-height:500px) and (orientation:landscape){:root{--ivf-dp:calc(100vw / 640)}}',
       // Jellyfin's page underneath is never seen: no loading circle over ours either
       'html.ivf-show-on .docspinner{display:none !important}',
       // ...and not laid out at all (its rows measuring themselves cost time on the Samsung)
@@ -115,18 +115,20 @@
       '.ivf-ep-img{position:relative;width:100%;padding-top:56.25%;border-radius:' + dd(4) + ';background:#151515 center/cover no-repeat;background-clip:padding-box;',
       'border:' + dd(1.5) + ' solid transparent;box-sizing:border-box;transition:transform .12s,border-color .12s}',
       '.ivf-ep:hover .ivf-ep-img,.ivf-ep:focus .ivf-ep-img{transform:scale(1.06);border-color:#fff}',
+      // (round 7: the last card's grown picture and ring ran past the page's right edge; the first past the left)
+      '.ivf-ep:nth-child(4n) .ivf-ep-img{transform-origin:100% 50%}.ivf-ep:nth-child(4n+1) .ivf-ep-img{transform-origin:0 50%}',
       '.ivf-ep-progress{position:absolute;left:0;right:0;bottom:0;height:' + dd(4) + ';background:rgba(255,255,255,.25);',
       'border-radius:0 0 ' + dd(2.5) + ' ' + dd(2.5) + ';overflow:hidden}',
       '.ivf-ep-progress div{height:100%;background:#d1d5db}',
       '.ivf-ep-title{letter-spacing:' + dd(0.1) + ';margin-top:' + dd(4) + ';font-size:' + dd(14) + ';font-weight:600;line-height:1.3;color:#d1d5db}',
       '.ivf-ep-meta{font-weight:400;letter-spacing:' + dd(0.4) + ';display:flex;flex-wrap:wrap;align-items:center;column-gap:' + dd(14) + ';row-gap:' + dd(2) + ';font-size:' + dd(12) + ';color:#d1d5db}',
       '.ivf-ep-meta > span{white-space:nowrap}','.ivf-ep-overview + .ivf-ep-meta{margin-top:' + dd(4) + '}',
-      '.ivf-ep-meta .material-icons{font-size:' + dd(14) + ';color:#00A4DC;margin-right:' + dd(4) + ';vertical-align:middle}',
+      '.ivf-ep-meta .material-icons{font-size:' + dd(14) + ';color:#f5c518; /* round 7: gold like the show rating (was Jellyfin blue) */ margin-right:' + dd(4) + ';vertical-align:middle}',
       '.ivf-ep-overview{font-weight:400;letter-spacing:' + dd(0.4) + ';font-size:' + dd(12) + ';line-height:' + dd(16) + ';color:#9ca3af;overflow-wrap:anywhere;padding-right:' + dd(4) + ';box-sizing:border-box}' /* round 5: lines ran past the card edge */,
       // Cast & Crew (film page's PersonCard: 108dp circle, name 14sp semi-bold, role 12sp, one line each)
       '.ivf-tvs-cast{margin-top:' + dd(24) + '}',
       '.ivf-tvs-cast h3{margin:0 0 ' + d(8) + ';font-size:' + d(22) + ';font-weight:400;line-height:' + d(28) + ';color:#d1d5db}',
-      '.ivf-tvs-strip{display:flex;gap:' + d(16) + ';overflow-x:auto;overflow-y:hidden;scrollbar-width:none;padding:' + d(8) + ' ' + d(8) + ';margin:0 -' + d(8) + ';align-items:flex-start}',
+      '.ivf-tvs-strip{display:flex;gap:' + d(16) + ';overflow-x:auto;overflow-y:hidden;scrollbar-width:none;padding:' + d(8) + ' ' + d(8) + ';margin:0 ' + d(-8) + '; /* round 7: "-calc()" was invalid CSS, so the cards sat 12px right of their heading */ align-items:flex-start}',
       '.ivf-tvs-strip::-webkit-scrollbar{display:none}',
       '.ivf-tvs-person{flex:none;width:' + d(108) + ';display:flex;flex-direction:column;align-items:center;background:none;border:0;padding:0;color:#d1d5db;font:inherit;cursor:pointer;outline:none}',
       '.ivf-tvs-face{width:100%;padding-top:100%;border-radius:50%;background:#1c1c1c center/cover no-repeat;position:relative;box-shadow:0 0 0 ' + d(1.5) + ' transparent;transition:transform .12s}',
@@ -145,7 +147,7 @@
       '.ivf-tvs-wide .ivf-tvs-face{padding-top:56.25%;border-radius:' + d(6) + ';background-color:#050505;background-size:contain}',
       '.ivf-tvs-poster{width:' + d(124) + '}',
       '.ivf-tvs-poster .ivf-tvs-face{padding-top:150%;border-radius:' + d(4) + '}',
-      '.ivf-tvs-poster:focus .ivf-tvs-face{transform:scale(1.06)}',
+      '.ivf-tvs-poster:focus .ivf-tvs-face{transform:scale(1.06)}','.ivf-tvs-poster .ivf-tvs-face{transform-origin:50% 100%}', // (round 7: the grown poster covered its title - it now grows upward from its bottom edge)
       // Season picker dialog (like IvanaFin's DialogPopup)
       '.ivf-dialog{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center}',
       '.ivf-dialog-box{min-width:' + dd(300) + ';max-height:80vh;overflow:auto;padding:' + dd(16) + ';border-radius:' + dd(16) + ';background:#000;',
@@ -170,7 +172,23 @@
       '.ivf-ep:hover .ivf-ep-img,.ivf-ep:focus .ivf-ep-img{transform:none}',
       '.ivf-ep:focus:not(:focus-visible):not(:hover) .ivf-ep-img{border-color:transparent}',
       '.ivf-tvs-person:hover .ivf-tvs-face{box-shadow:0 0 0 ' + d(2) + ' #fff;transform:scale(1.1)}',
-      '.ivf-tvs-person:focus:not(:focus-visible):not(:hover) .ivf-tvs-face{box-shadow:none;transform:none}'
+      '.ivf-tvs-person:focus:not(:focus-visible):not(:hover) .ivf-tvs-face{box-shadow:none;transform:none}',
+      // Phone (2026-11-22): narrow margins; one episode per row - picture left, title and time beside
+      // it, the description underneath across the full width
+      '@media (max-width:760px) and (orientation:portrait){',
+      R + ' .ivf-tvs-scroll{padding-left:16px;padding-right:16px}',
+      '.ivf-tvs-head{padding:0}',
+      '.ivf-logo img{max-width:100%}',
+      '.ivf-ep-grid{grid-template-columns:minmax(0,1fr);row-gap:20px}',
+      '.ivf-ep{display:grid;grid-template-columns:44% minmax(0,1fr);grid-template-areas:"img title" "img meta" "ov ov";column-gap:12px;row-gap:4px;align-items:start}',
+      '.ivf-ep-img{grid-area:img}',
+      '.ivf-ep-title{grid-area:title;margin-top:0}',
+      '.ivf-ep-meta{grid-area:meta;margin-top:0}',
+      '.ivf-ep-overview{grid-area:ov;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}',
+      '.ivf-ep-overview + .ivf-ep-meta{margin-top:0}',
+      '.ivf-dialog-box{max-width:92vw;box-sizing:border-box}',
+      '.ivf-bar{gap:10px;width:100%}.ivf-pill{width:auto;flex:1 1 0;min-width:0;font-size:15px;min-height:42px}.ivf-pill .material-icons{font-size:20px}',
+      '}'
     ].join(''));
     document.head.appendChild(s);
   }
@@ -587,6 +605,9 @@
       if (!h.getClientRects().length || getComputedStyle(h).visibility === 'hidden') return;
       b = Math.max(b, Math.round(h.getBoundingClientRect().bottom));
     });
+    // (round 7: measured while Jellyfin hid its bar for a page change = 0, and the fade under the bar was
+    // lost - text ran under the icons. Keep the last real height.)
+    try { if (b > 0) sessionStorage.setItem('ivf-hdr-h', b); else b = +sessionStorage.getItem('ivf-hdr-h') || 74; } catch (e) { if (!b) b = 74; }
     if (root.style.getPropertyValue('--ivf-tvs-top') !== b + 'px') root.style.setProperty('--ivf-tvs-top', b + 'px');
   }
   window.addEventListener('resize', placeBelowHeader);

@@ -33,7 +33,7 @@
     var s = document.createElement('style');
     s.id = STYLE_ID;
     s.textContent = [
-      ':root{--ivf-dp:calc(100vw / 960)}',
+      ':root{--ivf-dp:calc(100vw / 960)}@media (max-width:760px) and (orientation:portrait){:root{--ivf-dp:calc(100vw / 280)}}@media (max-height:500px) and (orientation:landscape){:root{--ivf-dp:calc(100vw / 640)}}',
       TV ? 'html.ivf-search-on .skinHeader{display:none !important}'
         // Web: the top bar is see-through - no Jellyfin backdrop behind it (it showed a different picture
         // above our page) and a plain black bar, like the web Home and Discover pages

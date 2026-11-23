@@ -56,7 +56,7 @@
     var s = document.createElement('style');
     s.id = STYLE_ID;
     s.textContent = [
-      ':root{--ivf-dp:calc(100vw / 960)}',
+      ':root{--ivf-dp:calc(100vw / 960)}@media (max-width:760px) and (orientation:portrait){:root{--ivf-dp:calc(100vw / 280)}}@media (max-height:500px) and (orientation:landscape){:root{--ivf-dp:calc(100vw / 640)}}',
       'html,html *:not(.material-icons):not([class*="material-icons"]):not(.md-icon):not(i){font-family:Roboto,"Noto Sans",sans-serif !important}',
       // While our Home is up the web's header is hidden (no logo, tabs, icons or clock)
       TV ? 'html.ivf-shome-on .skinHeader{display:none !important}' : '',
@@ -129,7 +129,10 @@
       '.ivf-sh-img.ivf-on{opacity:1}',
       '.ivf-sh-shade{position:absolute;inset:0;background:rgba(0,0,0,.35)}',
       '.ivf-sh-name{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;',
-      'padding:0 calc(' + d + ' * 24);color:#fff;font-weight:700;line-height:1.15;text-shadow:0 calc(' + d + ' * 1) calc(' + d + ' * 3) rgba(0,0,0,.85),0 0 calc(' + d + ' * 16) rgba(0,0,0,.7)}' /* round 5: pale tile pictures */
+      'padding:0 calc(' + d + ' * 24);color:#fff;font-weight:700;line-height:1.15;text-shadow:0 calc(' + d + ' * 1) calc(' + d + ' * 3) rgba(0,0,0,.85),0 0 calc(' + d + ' * 16) rgba(0,0,0,.7)}' /* round 5: pale tile pictures */,
+      // Phone (2026-11-22): tile names sized for the phone, not the TV (the inline size was cut off)
+      '@media (max-width:760px) and (orientation:portrait){.ivf-sh-name{font-size:22px !important;padding:0 6px}#ivf-shome .ivf-sh-grid{grid-template-columns:repeat(2,1fr) !important}}',
+      '@media (max-height:500px) and (orientation:landscape){.ivf-sh-name{font-size:24px !important}}'
     ].join('');
     document.head.appendChild(s);
   }
@@ -330,7 +333,13 @@
       .filter(function (e) { return cfg.types[e.id] !== 'playlists'; });
     if (cfg.picks) list = cfg.picks.map(function (id) { return list.filter(function (e) { return e.id === id; })[0]; }).filter(Boolean);
     if (cfg.games) list.push({ name: 'Games', act: 'games' });
+    // Phone (2026-11-22, user): no Music or Games tile - not needed on the phone
+    if (isPhone()) list = list.filter(function (e) { return e.act !== 'games' && cfg.types[e.id] !== 'music'; });
     return list;
+  }
+  // the phone app / a phone browser, either way up (the same test as the phone sizes in every script)
+  function isPhone() {
+    try { return !TV && window.matchMedia('(max-width:760px) and (orientation:portrait), (max-height:500px) and (orientation:landscape)').matches; } catch (e) { return false; }
   }
   // Discover needs Jellyfin Enhanced (+ Seerr) on the server
   function hasDiscover() { return !!window.JellyfinEnhanced; }
@@ -343,7 +352,7 @@
     var dsc = hasDiscover();
     // (no Discover tile any more: its trending pictures aren't fetched)
     var sig = cards.map(function (c) { return c.getAttribute('data-id') + ':' + cardName(c); }).join(',') +
-      '|' + (cfg.picks || []).join(',') + (cfg.games ? '|games' : '') + (dsc ? '|dsc' : '');
+      '|' + (cfg.picks || []).join(',') + (cfg.games ? '|games' : '') + (dsc ? '|dsc' : '') + (isPhone() ? '|phone' : '');
     if (!root) {
       addStyle();
       root = document.createElement('div');
@@ -392,6 +401,11 @@
     return true;
   }
 
+  var kbUser = false; // web: the last thing used was the keyboard (not the mouse)
+  if (!TV) {
+    window.addEventListener('keydown', function (e) { if (/^(Tab|Arrow|Enter|Escape|Page)/.test(e.key || '')) kbUser = true; }, true);
+    window.addEventListener('pointerdown', function () { kbUser = false; }, true);
+  }
   function focusStart() {
     var last = -1;
     try { last = parseInt(sessionStorage.getItem(LAST_KEY) || '-1', 10); } catch (e) {}
@@ -472,8 +486,9 @@
       if (games) setTilePicture(games, gamesUrl);
     }
     fitNamesSoon();
-    // TV only: something must always be selected for the remote (web has a mouse - nothing preselected)
-    if (TV && (wasHidden || !root.contains(document.activeElement))) {
+    // TV: something must always be selected for the remote. Web: only for someone using the keyboard
+    // (round 7: Back to Home always started again on Movies) - mouse users get nothing preselected
+    if ((TV || kbUser) && (wasHidden || !root.contains(document.activeElement))) {
       focusStart();
       holdFocus();
     }
@@ -878,7 +893,43 @@
   document.addEventListener('viewshow', function () {
     if (!/^#\/details/.test(location.hash)) return;
     [300, 1000, 2500].forEach(function (ms) { setTimeout(fix, ms); });
+    if (TV) [600, 1500].forEach(function (ms) { setTimeout(toTop, ms); });
   });
+  var TV = (typeof tizen !== 'undefined' || !!window.PalmSystem) || localStorage.getItem('layout') === 'tv';
+  // Round-7 beta, person pages:
+  // - Samsung/LG: the page opened scrolled down to its first card, so the name and bio were off the top.
+  //   Scroll back to the top while the selected card stays on screen.
+  function toTop() {
+    var pg = document.querySelector('.page:not(.hide)'), a = document.activeElement;
+    if (!pg || !pg.querySelector('.jellyseerr-person-discovery-section, .detailSectionContent .overview') || !a || !pg.contains(a)) return;
+    var sc = pg.querySelector('.itemDetailPage, .padded-top-focusscale') || pg;
+    [pg, sc, document.scrollingElement].forEach(function (s) {
+      if (!s || !s.scrollTop) return;
+      // room = how far the page can move down before the selected card leaves the bottom
+      var room = window.innerHeight - a.getBoundingClientRect().bottom - 24;
+      s.scrollTop -= Math.min(s.scrollTop, Math.max(0, room));
+    });
+  }
+  // - Jellyfin Enhanced's "Go to More with X, not in the library" jump link looked like stray bold text
+  //   with a thin blue outline: now a pill button like the others; the bio no longer spans the full width
+  var st = document.createElement('style');
+  st.textContent =
+    '.jellyseerr-join-jump{display:inline-block !important;padding:.55em 1.2em !important;border-radius:999px !important;border:0 !important;' +
+    'background:rgba(255,255,255,.08) !important;color:#d1d5db !important;font:inherit;font-size:.95em !important;font-weight:500 !important;cursor:pointer;outline:none !important;box-shadow:none !important;margin:.4em 0 1em !important}' +
+    '.jellyseerr-join-jump:hover,.jellyseerr-join-jump:focus{background:#d1d5db !important;color:#131414 !important}' +
+    '.jellyseerr-join-jump-go{font-weight:600}' +
+    '.detailSectionContent .overview{max-width:72em}';
+  document.head.appendChild(st);
+  // - Samsung/LG: OK on a "More with X" card (not in the library) only opened Jellyfin Enhanced's
+  //   overlay with a Request button one press away. OK now opens the title's page, like every other card.
+  if (TV) document.addEventListener('keydown', function (e) {
+    if (e.keyCode !== 13 && e.key !== 'Enter') return;
+    var a = document.activeElement, card = a && a.classList && a.classList.contains('jellyseerr-poster-image') && a.closest('.jellyseerr-card');
+    var link = card && card.querySelector('.jellyseerr-more-info-link');
+    if (!link) return;
+    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+    link.click();
+  }, true);
 })();
 
 // Jellyfin Enhanced's settings panel (a plugin page):
@@ -940,4 +991,24 @@
     e.preventDefault(); e.stopPropagation();
     location.hash = prof.getAttribute('href').replace(/^#/, '');
   }, true);
+})();
+
+// Web: Esc = Back on the pages that had none (round-7 beta: library grids, Settings and the video player
+// ignored Esc while film pages, Search and Music already used it). Runs last (bubble phase), so a page
+// or dialog that handles Esc itself wins; never while typing, in a dialog or on Home.
+(function () {
+  if (typeof tizen !== 'undefined' || !!window.PalmSystem) return;
+  window.addEventListener('keydown', function (e) {
+    if (e.defaultPrevented || !(e.key === 'Escape' || e.keyCode === 27) || e.ctrlKey || e.altKey || e.metaKey) return;
+    var t = e.target;
+    if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || '') || t.isContentEditable)) return;
+    if (document.fullscreenElement) return; // the browser's own Esc leaves full screen first
+    if (document.querySelector('.dialogContainer .dialog, .je-more-info-modal, .jellyseerr-season-modal, #jellyfin-enhanced-panel, .ivf-dlg-on')) return;
+    var h = location.hash || '';
+    // (Music, Search, Discover and film/show pages handle Esc themselves)
+    if (!/^#\/(movies|tv|list|livetv|collections|video|mypreferences|userprofile|playbackconfiguration|subtitles|dashboard|settings|preferences)/.test(h)) return;
+    if (document.documentElement.classList.contains('ivf-music-on')) return;
+    e.preventDefault();
+    history.back();
+  });
 })();

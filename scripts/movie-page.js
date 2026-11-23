@@ -50,7 +50,7 @@
     var s = document.createElement('style');
     s.id = STYLE_ID;
     s.textContent = [
-      ':root{--ivf-dp:calc(100vw / 960)}',
+      ':root{--ivf-dp:calc(100vw / 960)}@media (max-width:760px) and (orientation:portrait){:root{--ivf-dp:calc(100vw / 280)}}@media (max-height:500px) and (orientation:landscape){:root{--ivf-dp:calc(100vw / 640)}}',
       // Jellyfin's loading circle is for its own page loading underneath ours: never shown over a film
       'html.ivf-movie-on .docspinner{display:none !important}',
       // Jellyfin's own film page underneath is not laid out at all (its rows measuring themselves made
@@ -119,7 +119,7 @@
       '.ivf-mv-row h3{margin:0 0 0 ' + d(40) + ';font-size:' + d(22) + ';font-weight:400;line-height:' + d(28) + ';color:#d1d5db}',
       '.ivf-mv-strip{display:flex;gap:' + d(16) + ';overflow-x:auto;overflow-y:hidden;scrollbar-width:none;padding:' + d(16) + ' ' + d(40) + ' ' + d(8) + ';scroll-behavior:smooth;align-items:flex-start}',
       '.ivf-mv-strip::-webkit-scrollbar{display:none}',
-      '.ivf-mv-row:not(.cast):not(.sw-planet):not(.sw-char) .ivf-mv-strip{padding-left:' + d(48) + '}',
+      '.ivf-mv-row:not(.cast):not(.sw-planet):not(.sw-char) .ivf-mv-strip{padding-left:' + d(40) + '} /* round 7: cards line up with their heading (was 48) */',
       '.ivf-mv-item{flex:none;display:flex;flex-direction:column;align-items:center;background:none;border:0;padding:0;color:#d1d5db;font:inherit;cursor:pointer;outline:none}',
       // Cast & Crew (PersonCard: 108dp circle, name 14sp semi-bold, role 12sp, one line each)
       '.ivf-mv-person{width:' + d(108) + '}',
@@ -194,7 +194,19 @@
       '.ivf-mv-btns:hover .ivf-mv-btn:focus:not(:hover) .lbl,.ivf-mv-btn:focus:not(:focus-visible):not(:hover) .lbl{max-width:0;padding:0}',
       '.ivf-mv-item:focus:not(:focus-visible):not(:hover) .ivf-mv-face,.ivf-mv-item:focus:not(:focus-visible):not(:hover) .pic{box-shadow:none;transform:none}',
       '.ivf-mv-wide:focus:not(:focus-visible):not(:hover){box-shadow:none;transform:none}',
-      '.ivf-mv-ov:focus:not(:focus-visible):not(:hover){background:none}'
+      '.ivf-mv-ov:focus:not(:focus-visible):not(:hover){background:none}',
+      // Phone (2026-11-22, user: the Jellyfin phone app loads these pages): narrow margins, the tagline
+      // may wrap, lists and the crawl fit the screen
+      '@media (max-width:760px) and (orientation:portrait){',
+      '.ivf-mv-head{padding-left:16px;padding-right:16px}',
+      '.ivf-mv-logo{max-width:100%}',
+      '.ivf-mv-title{max-width:100%}',
+      '.ivf-mv-tag{white-space:normal}',
+      '.ivf-mv-row h3{margin-left:16px}',
+      '.ivf-mv-strip,.ivf-mv-row:not(.cast):not(.sw-planet):not(.sw-char) .ivf-mv-strip{padding-left:16px;padding-right:16px}',
+      '.ivf-mv-box{width:92vw}',
+      '.ivf-crawl-text{width:90vw;margin-left:-45vw}',
+      '}'
     ].join(''));
     document.head.appendChild(s);
   }
@@ -416,6 +428,8 @@
       if (kind === 'subs') sub = [s.Title || '', codecName(s.Codec), s.IsExternal ? 'External' : '', s.IsDefault ? '(Default)' : ''].filter(Boolean).join(' · ');
       return { value: String(s.Index), head: head || s.DisplayTitle || 'Track ' + s.Index, sub: sub };
     });
+    var seenH = {}; // identical entries (untitled tracks in one language): number the repeats
+    opts.forEach(function (o) { var k = o.head + '|' + o.sub; seenH[k] = (seenH[k] || 0) + 1; if (seenH[k] > 1) o.head += ' (' + seenH[k] + ')'; });
     if (kind === 'subs') opts.unshift({ value: '-1', head: 'None', sub: '' });
     if (!chosen) {
       var def = streams.filter(function (s) { return s.Index === (kind === 'audio' ? src.DefaultAudioStreamIndex : src.DefaultSubtitleStreamIndex); })[0];
@@ -448,9 +462,13 @@
     var it = cur.item, h = '';
     (it.MediaSources || []).forEach(function (src) {
       h += '<b>' + esc(it.Name) + '</b><span>' + esc([src.Name && src.Name !== it.Name ? src.Name : '', (src.Container || '').toUpperCase(), src.Size ? (src.Size / 1073741824).toFixed(2) + ' GB' : '', src.Bitrate ? Math.round(src.Bitrate / 1e6) + ' Mbps' : ''].filter(Boolean).join(' · ')) + '</span>';
+      // (round 7: files often hold several untitled tracks per language - number the repeats)
+      var seen = {};
       (src.MediaStreams || []).forEach(function (s) {
         if (s.Type !== 'Video' && s.Type !== 'Audio' && s.Type !== 'Subtitle') return;
-        h += '<b>' + s.Type + '</b><span>' + esc(s.DisplayTitle || '') + '</span><span>' + esc([(s.Codec || '').toUpperCase(), s.Profile && s.Profile !== 'Unknown' ? s.Profile : '', s.Width ? s.Width + 'x' + s.Height : '', s.VideoRangeType && s.VideoRangeType !== 'SDR' ? s.VideoRangeType : '', s.ChannelLayout, s.BitRate ? Math.round(s.BitRate / 1000) + ' kbps' : '', s.Language].filter(Boolean).join(' · ')) + '</span>';
+        var dt = s.DisplayTitle || '', key = s.Type + '|' + dt; seen[key] = (seen[key] || 0) + 1;
+        if (seen[key] > 1) dt += ' (' + seen[key] + ')';
+        h += '<b>' + s.Type + '</b><span>' + esc(dt) + '</span><span>' + esc([(s.Codec || '').toUpperCase(), s.Profile && s.Profile !== 'Unknown' ? s.Profile : '', s.Width ? s.Width + 'x' + s.Height : '', s.VideoRangeType && s.VideoRangeType !== 'SDR' ? s.VideoRangeType : '', s.ChannelLayout, s.BitRate ? Math.round(s.BitRate / 1000) + ' kbps' : '', s.Language].filter(Boolean).join(' · ')) + '</span>';
       });
     });
     var dlg = openDialog('<div class="ivf-mv-dtitle">Media Information</div><div class="ivf-mv-info" tabindex="-1">' + h + '</div>');
@@ -622,6 +640,9 @@
       if (!h.getClientRects().length || getComputedStyle(h).visibility === 'hidden') return;
       b = Math.max(b, Math.round(h.getBoundingClientRect().bottom));
     });
+    // (round 7: measured while Jellyfin hid its bar for a page change = 0, and the fade under the bar was
+    // lost - text ran under the icons. Keep the last real height.)
+    try { if (b > 0) sessionStorage.setItem('ivf-hdr-h', b); else b = +sessionStorage.getItem('ivf-hdr-h') || 74; } catch (e) { if (!b) b = 74; }
     if (root.style.getPropertyValue('--ivf-mv-top') !== b + 'px') root.style.setProperty('--ivf-mv-top', b + 'px');
   }
   window.addEventListener('resize', placeBelowHeader);
@@ -717,6 +738,12 @@
       var cards = stockPage() && stockPage().querySelectorAll('#scenesContent .card, .scenesContent .card');
       var c = cards && cards[+b.getAttribute('data-chapter')];
       if (c) (c.querySelector('[data-action]') || c).click();
+      else {
+        // Jellyfin builds no Scenes cards when chapter pictures are off (this server) - start the film at
+        // the chapter's time through Jellyfin's own player (round 7: clicking a scene did nothing)
+        var ch = (cur.item.Chapters || [])[+b.getAttribute('data-chapter')], pm = window.IvfMusic && window.IvfMusic.pm && window.IvfMusic.pm();
+        if (ch && pm) pm.play({ ids: [cur.item.Id], startPositionTicks: ch.StartPositionTicks || 0, serverId: ApiClient.serverId() });
+      }
     } else if (b.hasAttribute('data-extra')) {
       var ex = stockPage() && stockPage().querySelectorAll('#specialsContent .card, .specialsContent .card');
       var x = ex && ex[+b.getAttribute('data-extra')];

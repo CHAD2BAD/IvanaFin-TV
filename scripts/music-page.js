@@ -56,7 +56,7 @@
     var s = document.createElement('style');
     s.id = 'ivf-music-style';
     var css = [
-      ':root{--ivf-dp:calc(100vw / 960)}',
+      ':root{--ivf-dp:calc(100vw / 960)}@media (max-width:760px) and (orientation:portrait){:root{--ivf-dp:calc(100vw / 280)}}@media (max-height:500px) and (orientation:landscape){:root{--ivf-dp:calc(100vw / 640)}}',
       // Jellyfin's own now-playing bar never shows (ours replaces it in Music; outside Music nothing plays)
       '.appfooter{visibility:hidden !important;pointer-events:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important}',
       // Jellyfin's own pages underneath are never seen: don't let the TV keep drawing them
@@ -98,6 +98,9 @@
       R + '.top::after{content:"";flex:none;width:' + d(200) + '}',
       R + '.nv{display:flex;align-items:center;gap:' + d(7) + ';height:' + d(36) + ';padding:0 ' + d(10) + ';border-radius:999px;color:rgba(255,255,255,.6);font-size:' + d(12) + ';font-weight:500}',
       R + '.nv .material-icons{font-size:' + d(18) + '}',
+      // (round 7: the tab names and Jellyfin's icons vanished over bright artist photos)
+      R + '.nv:not(:focus){text-shadow:0 1px ' + d(4) + ' rgba(0,0,0,.85)}' + R + '.nv:not(:focus) .material-icons{filter:drop-shadow(0 1px ' + d(2) + ' rgba(0,0,0,.85))}',
+      'html.ivf-music-on .skinHeader .headerButton,html.ivf-music-on header.MuiAppBar-root button{filter:drop-shadow(0 1px 3px rgba(0,0,0,.9))}',
       R + '.nv.on{color:#fff}',
       // ---- page ----
       // the selected item's picture sits in its own layer behind the page, so it stays put while the page scrolls
@@ -141,7 +144,9 @@
       'text-shadow:0 1px 3px rgba(0,0,0,.85)}' + R + '.cd .o>span{overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}',
       R + '.cd.on .o{color:' + GREEN + '}',
       R + '.cd.ar .p{border-radius:50%}',
-      R + '.cd.ar .o{position:static;background:none;text-align:center;padding:' + d(6) + ' 0 0;font-weight:500;text-shadow:none}',
+      R + '.cd.ar .o{position:static;background:none;text-align:center;padding:' + d(14) + ' 0 0;font-weight:500;text-shadow:none}',
+      // (round 7: the selected circle grows and its ring covered the name; long names stay on one line)
+      R + '.cd.ar .o span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
       // Your Library grid
       R + '.lt{position:relative;display:flex;align-items:center;gap:' + d(10) + ';padding:' + d(110) + ' ' + d(40) + ' ' + d(14) + '}',
       // Sort by list under the sort chip
@@ -170,7 +175,7 @@
       R + '.bw .p.liked{background:linear-gradient(135deg,#450af5,#c4efd9);display:flex;align-items:center;justify-content:center}' + R + '.bw .p.liked .material-icons{font-size:' + d(30) + ';transform:rotate(-25deg)}',
       R + '.bw:hover{filter:brightness(1.12)}' + R + '.bw:focus{box-shadow:0 0 0 ' + d(3) + ' #fff}',
       R + '.bvh{padding:' + d(110) + ' ' + d(40) + ' ' + d(14) + '}' + R + '.bvh .k{font-size:' + d(11) + ';font-weight:700;color:rgba(255,255,255,.75)}' + R + '.bvh h1{font-size:' + d(MU_TYPE.hero) + ';font-weight:800;margin-top:' + d(2) + '}',
-      R + '.cd .ln{display:block;margin-top:' + d(6) + ';font-size:' + d(11) + ';font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      R + '.cd .ln{display:block;margin-top:' + d(10) + '; /* round 7: room for the grown cover ring */ font-size:' + d(11) + ';font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
       R + '.cd .ls{display:block;font-size:' + d(MU_TYPE.label) + ';color:rgba(255,255,255,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
       R + '.cd.ar .ln,' + R + '.cd.ar .ls{text-align:center}',
       R + '.cd.on .ln{color:' + GREEN + '}',
@@ -222,9 +227,9 @@
       R + '.about h2{font-size:' + d(16) + ';color:#fff;margin-bottom:' + d(6) + '}',
       R + '.about p{margin:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical}',
       // artist page: Popular (5 rows until See more), About card (photo + bio, select to read it all)
-      R + '.pop{margin:' + d(18) + ' ' + d(30) + ' 0}' + R + '.pop h2{font-size:' + d(16) + ';color:#fff;margin:0 0 ' + d(6) + ' ' + d(10) + '}',
+      R + '.pop{margin:' + d(18) + ' 0 0}' + R + '.pop h2{font-size:' + d(16) + ';color:#fff;margin:0 0 ' + d(6) + ' ' + d(40) + '}',
       R + '.pop.cl .tr:nth-child(n+6){display:none}',
-      R + '.pop .bt.sm{margin:' + d(6) + ' 0 0 ' + d(10) + '}',
+      R + '.pop .bt.sm{margin:' + d(6) + ' 0 0 ' + d(40) + '}',
       R + '.about{max-width:none}',
       R + '.abt{display:flex;gap:' + d(20) + ';width:' + d(760) + ';max-width:100%;padding:' + d(16) + ';border:0;border-radius:' + d(8) + ';background:#242424;color:inherit;font:inherit;text-align:left;cursor:pointer;outline:none}',
       R + '.abt:focus-visible,' + R + '.abt:hover{box-shadow:0 0 0 ' + d(2) + ' #fff}',
@@ -310,7 +315,7 @@
       // (the picture box gets its height from padding, so the four covers are placed absolutely)
       R + '.mx .p{overflow:hidden}' + R + '.mx .p i{position:absolute;left:0;top:0;width:50%;height:50%;background:#333 center/cover no-repeat}',
       R + '.mx .p i:nth-child(2){left:50%}' + R + '.mx .p i:nth-child(3){top:50%}' + R + '.mx .p i:nth-child(4){left:50%;top:50%}',
-      R + '.mx .mt{position:absolute;left:0;right:0;top:0;padding:' + d(8) + ';font-size:' + d(MU_TYPE.card) + ';line-height:1.2;font-weight:700;text-shadow:0 1px ' + d(3) + ' rgba(0,0,0,.85);padding-bottom:' + d(18) + ';background:linear-gradient(rgba(0,0,0,.82),rgba(0,0,0,.55) 55%,transparent); /* round 5: names over busy covers */z-index:1}',
+      R + '.mx .mt{position:absolute;left:0;right:0;top:0;padding:' + d(8) + ';font-size:' + d(MU_TYPE.card) + ';line-height:1.2;font-weight:700;text-shadow:0 1px ' + d(3) + ' rgba(0,0,0,.85);padding-bottom:' + d(22) + ';background:linear-gradient(rgba(0,0,0,.9),rgba(0,0,0,.78) 60%,transparent); /* round 5+7: names over busy covers */z-index:1}',
       R + '.mx .ls{display:block;margin-top:' + d(6) + ';font-size:' + d(MU_TYPE.label) + ';color:rgba(255,255,255,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
       // ---- Now Playing (plan part 2) ----
       // moving background (Apple Music style, user: colour blur only): a tiny copy of the cover
@@ -388,7 +393,7 @@
       R + '.top::before{display:none}',
       // web: the mouse selects; a click's leftover focus doesn't stay outlined
       R + '.fx:focus:not(:focus-visible){box-shadow:none}',
-      R + '.nv:hover{color:#fff}' + R + '.nv:focus:not(:focus-visible){background:none;color:rgba(255,255,255,.6)}' + R + '.nv.on:focus:not(:focus-visible){color:#fff}',
+      R + '.nv:focus-visible{background:#fff;color:#000;box-shadow:none}' + R + '.nv:hover{color:#fff}' + R + '.nv:focus:not(:focus-visible){background:none;color:rgba(255,255,255,.6)}' + R + '.nv.on:focus:not(:focus-visible){color:#fff}',
       R + '.sc:hover{filter:brightness(1.22)}' + R + '.mini:hover{filter:brightness(1.15)}',
       R + '.cd:hover .p{box-shadow:0 0 0 ' + d(2) + ' ' + BG + ',0 0 0 ' + d(4) + ' #fff}' + R + '.cd:focus:not(:focus-visible) .p{box-shadow:none}' + R + '.cd:hover:focus .p{box-shadow:0 0 0 ' + d(2) + ' ' + BG + ',0 0 0 ' + d(4) + ' #fff}',
       // the lift follows the mouse on the web (a click's leftover focus doesn't keep a card grown)
@@ -406,6 +411,24 @@
       R + '.npbar{cursor:pointer}' + R + '.npbar:hover i{height:' + d(5) + ';margin-top:' + d(-2.5) + '}' + R + '.npbar:hover b{background:' + GREEN + '}',
       // (the About the artist card opens the artist's page)
       R + '.abc:focus:not(:focus-visible){box-shadow:none}' + R + '.abc:hover{box-shadow:0 0 0 ' + d(2) + ' #fff}'
+    ]);
+    // Phone (2026-11-22): 16px side margins, tabs left-aligned with no spacer, the album cover smaller
+    // with the title below it, 2 shortcut columns
+    if (!TV) css = css.concat([
+      '@media (max-width:760px) and (orientation:portrait){',
+      [' .top', ' .hero', ' .sg', ' .row h2', ' .lh', ' .strip', ' .gd', ' .acts', ' .about', ' .bvh', ' .bwg', ' .bwh', ' .empty', ' .lt', ' .sbox', ' .sortm']
+        .map(function (c) { return R.trim() + c; }).join(',') + '{padding-left:16px !important;padding-right:16px !important}',
+      R + '.top::after{display:none}',
+      R + '.top{flex-wrap:wrap;height:auto;gap:8px}',
+      R + '.mini{width:100%;order:2}',
+      R + '.nav{justify-content:flex-start;gap:4px}',
+      R + '.hero{max-width:none;min-height:0;padding-bottom:16px}',
+      R + '.hart{width:100%}',
+      R + '.hart.sq{width:42vw;height:42vw;right:16px;top:calc(var(--ivf-mu-hd,0px) + 64px)}',
+      '#' + ROOT_ID + ':has(.hart.sq) .hero{padding-top:calc(42vw + 80px)}',
+      R + '.sg{grid-template-columns:repeat(2,minmax(0,1fr))}',
+      R + '.pop{margin-left:0;margin-right:0}' + R + '.pop h2{margin-left:16px}' + R + '.pop .tl,' + R + '.tl{padding-left:6px;padding-right:6px}',
+      '}'
     ]);
     s.textContent = css.join('');
     document.head.appendChild(s);
@@ -1095,7 +1118,19 @@
       ApiClient.getJSON(ApiClient.getUrl('/Artists/AlbumArtists', { ParentId: lib.id, userId: uid(), SearchTerm: term, Limit: 20, ImageTypeLimit: 1, EnableImageTypes: 'Primary,Backdrop' })).then(function (r) { return (r && r.Items) || []; }, function () { return []; }),
       getItems({ ParentId: lib.id, IncludeItemTypes: 'Audio', Recursive: true, SearchTerm: term, Limit: 30, Fields: 'RunTimeTicks' })
     ]).then(function (r) {
-      if (t !== viewToken) return;
+      // Jellyfin only matches names: 'radiohead' found the artist but none of its albums or songs
+      // (round 7). Add the matched artists' own albums and songs after the name matches.
+      var ids = r[1].slice(0, 3).map(function (x) { return x.Id; }).join(',');
+      if (!ids || t !== viewToken) return r;
+      return Promise.all([
+        getItems(q({ AlbumArtistIds: ids, Limit: 30 })),
+        getItems({ ParentId: lib.id, IncludeItemTypes: 'Audio', Recursive: true, ArtistIds: ids, SortBy: 'PlayCount,SortName', SortOrder: 'Descending', Limit: 30, Fields: 'RunTimeTicks' })
+      ]).then(function (x) {
+        function add(list, more) { var seen = {}; list.forEach(function (i) { seen[i.Id] = 1; }); return list.concat(more.filter(function (i) { return !seen[i.Id] && (seen[i.Id] = 1); })).slice(0, 30); }
+        return [add(r[0], x[0]), r[1], add(r[2], x[1])];
+      }, function () { return r; });
+    }).then(function (r) {
+      if (!r || t !== viewToken) return;
       view.data = { tracks: r[2] };
       // Artists and Albums first, then the songs (round-5 beta: below up to 30 songs they were never seen)
       var h = row('Artists', r[1].map(artistCard).join('')) + row('Albums', r[0].map(card).join(''));
@@ -1128,8 +1163,8 @@
       if (b.liked) { cls += ' liked'; c = icon('favorite'); }
       else if (b.items) {
         var by = b.items.filter(function (a) { return a.ImageTags && a.ImageTags.Primary; }).sort(function (x, y) { return (y.ProductionYear || 0) - (x.ProductionYear || 0); });
-        var a0 = by.filter(function (a) { return !used[a.Id]; })[0] || by[0];
-        if (a0) { used[a0.Id] = 1; pic = cover(a0, 160); }
+        var a0 = by.filter(function (a) { return !used[a.Id] && !used[a.ImageTags.Primary]; })[0] || by[0];
+        if (a0) { used[a0.Id] = used[a0.ImageTags.Primary] = 1; pic = cover(a0, 160); } // (by picture too: Bully and BULLY EP share a cover)
       }
       else if (b.artists) { cls += ' ar'; var a = b.artists[0]; pic = a.ImageTags && a.ImageTags.Primary ? imgUrl(a.Id, 'Primary', { maxWidth: 160, tag: a.ImageTags.Primary }) : ''; }
       return '<button type="button" class="fx bw" data-k="browse:' + b.k + '" style="--bwc:' + huePal(b.hue).tile + '"><span>' + esc(b.name) + '</span><span class="' + cls + '"' + bgi(pic) + '>' + c + '</span></button>';
@@ -1685,8 +1720,12 @@
   function openArtistFromNow() {
     var id = shownState && shownState.artistId;
     if (!id) return;
+    var from = npReturn && page.contains(npReturn) ? npReturn : null;
     npOpen = false; np.classList.remove('on'); npReturn = null;
     go({ v: 'artist', arg: id }, 'nohist');
+    // Back from this artist: select the card/row that started the music (round 7: the focus was in
+    // Now Playing, so nothing was remembered and Music Home selected its first card)
+    if (from && stack.length && !stack[stack.length - 1].focusKey) stack[stack.length - 1].focusKey = keyOf(from);
   }
   function closeNow() {
     npOpen = false;
@@ -1696,7 +1735,10 @@
     moveJfHeader(page.scrollTop);
     var m = topEl.querySelector('.mini'), r = npReturn;
     npReturn = null;
-    // opened by starting a song: back to that song's row (or the button that started it)
+    // opened by starting a song: back to that song's row (or the button that started it); if the
+    // music has moved on to another song of this list, that song's row (round 7, LG)
+    var cur = page.querySelector('.tr.on');
+    if (cur && (!r || !page.contains(r) || r.classList.contains('tr'))) r = cur;
     if (r && page.contains(r)) { if (TV) focusEl(r); return; }
     if (TV) { if (!m.classList.contains('off')) focusEl(m); else focusDefault(); }
   }
@@ -2046,10 +2088,17 @@
     var top = 0;
     Array.prototype.forEach.call(document.querySelectorAll('.skinHeader, header.MuiAppBar-root'), function (h) {
       if (!h.getClientRects().length || getComputedStyle(h).visibility === 'hidden') return;
+      if (h.style.transform) return; // moved up with a scrolled page: not its real height
       top = Math.max(top, Math.round(h.getBoundingClientRect().bottom));
     });
+    // Jellyfin hides its bar for a moment while a page changes: measuring then gave 0 and the whole
+    // page dropped ~74 px a moment later (round 7). Keep the last real height instead.
+    if (top > 0) { lastHd = top; try { sessionStorage.setItem('ivf-mu-hd', top); } catch (e) {} }
+    else top = lastHd;
     root.style.setProperty('--ivf-mu-hd', top + 'px');
   }
+  var lastHd = 0; try { lastHd = +sessionStorage.getItem('ivf-mu-hd') || 0; } catch (e) {}
+  if (!lastHd && !TV) lastHd = 74; // Desktop (legacy) bar height at 1080p, until the first real measurement
   window.addEventListener('resize', measure);
   var barTimer = null, homeHash = null;
   function open(albumId) {
@@ -2291,4 +2340,29 @@
   window.addEventListener('hashchange', function () { setTimeout(check, 0); });
   document.addEventListener('viewshow', function () { setTimeout(check, 0); });
   check();
+})();
+
+// Remote media keys in Music (round-7 beta, LG: Play/Pause on the remote did nothing on Now Playing).
+// Handled here, before Jellyfin, so they work whatever the TV's browser does with them:
+// Play 415 / Pause 19 / Play-Pause 10252 (Samsung) or 179 / Stop 413 / Next 417 (FF) / Previous 412 (REW)
+(function () {
+  window.addEventListener('keydown', function (e) {
+    var M = window.IvfMusic, root = document.getElementById('ivf-music');
+    if (!M || !root || root.classList.contains('ivf-off')) return;
+    var k = e.keyCode, key = e.key || '';
+    var act = k === 415 || key === 'MediaPlay' ? 'play' : k === 19 || key === 'MediaPause' || key === 'Pause' ? 'pause'
+      : k === 10252 || k === 179 || key === 'MediaPlayPause' ? 'pp' : k === 413 || key === 'MediaStop' ? 'stop' : '';
+    if (!act) return;
+    var m = M.pm && M.pm(), p = m && m.getCurrentPlayer && m.getCurrentPlayer();
+    if (!m || !p) return;
+    e.preventDefault(); e.stopPropagation(); if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+    var s = M.state && M.state(), playing = !!(s && s.playing);
+    try {
+      if (act === 'play') { if (!playing) m.playPause(p); }
+      else if (act === 'pause') { if (playing) m.playPause(p); }
+      else if (act === 'pp') m.playPause(p);
+      else if (act === 'stop') m.stop(p);
+    } catch (x) {}
+    if (M.refresh) setTimeout(M.refresh, 150);
+  }, true);
 })();

@@ -77,7 +77,7 @@
     var s = document.createElement('style');
     s.id = 'ivf-dsc-style';
     s.textContent = [
-      ':root{--ivf-dp:calc(100vw / 960)}',
+      ':root{--ivf-dp:calc(100vw / 960)}@media (max-width:760px) and (orientation:portrait){:root{--ivf-dp:calc(100vw / 280)}}@media (max-height:500px) and (orientation:landscape){:root{--ivf-dp:calc(100vw / 640)}}',
       // runs to the very top so the backdrop does too; on web Jellyfin's top bar floats over it, fading
       // from dark into the picture (same as the film page), and the content starts below the bar
       '#ivf-dsc{position:fixed;left:0;right:0;bottom:0;top:0;z-index:900;background:#000;color:#d1d5db;overflow:hidden;font-family:inherit}',
@@ -416,6 +416,9 @@
       '.ivf-dd-btn .lbl{max-width:0;overflow:hidden;white-space:nowrap;transition:max-width .18s,padding .18s}',
       '.ivf-dd-btn:focus,.ivf-dd-btn:hover{background:#d1d5db;color:#131414;transform:scale(1.1)}',
       '.ivf-dd-btn:focus .lbl,.ivf-dd-btn:hover .lbl{max-width:' + v(200) + ';padding:0 ' + v(6) + ' 0 ' + v(2) + '}',
+      // web (round 7): with a mouse nothing is selected, so a lone download icon didn't say what it does -
+      // the first (main) button always shows its name
+      TV ? '' : '.ivf-dd-btn:first-child .lbl{max-width:' + v(200) + ';padding:0 ' + v(6) + ' 0 ' + v(2) + '}.ivf-dd-btn:first-child:not(:hover){background:rgba(255,255,255,.12)}',
       '.ivf-dd-btn[disabled]{opacity:.45;cursor:default}',
       '.ivf-dd-progress{font-size:' + v(15) + ';font-weight:500}',
       '.ivf-dd-tag{margin-left:' + v(8) + ';max-width:60%;font-size:' + v(16) + ';font-style:italic}',
@@ -517,7 +520,8 @@
   }
   function names(list) {
     var seen = {}, out = [];
-    (list || []).forEach(function (x) { var n = x && x.name; if (n && !seen[n]) { seen[n] = 1; out.push(n); } });
+    // (round 7: TMDB listed a studio named "about:blank" - junk names are skipped)
+    (list || []).forEach(function (x) { var n = x && x.name; if (n && !/^(about:blank|null|undefined|n\/a)$/i.test(n.trim()) && !seen[n]) { seen[n] = 1; out.push(n); } });
     return out;
   }
   // Seerr media status: 1 unknown, 2 pending, 3 processing, 4 partly available, 5 available, 6 blocklisted, 7 deleted
