@@ -314,7 +314,8 @@
     ]).then(function (res) {
       var dt = { series: res[0], seasons: res[1], nextUp: res[2], allEpisodes: res[3] };
       if (dt.series && dt.series.Type === 'Series' && dt.seasons.length) {
-        dt.startSeason = startSeasonId(dt.seasons, dt.nextUp);
+        // (round 8: a season picked earlier in this visit to the app is shown again - Miranda went back to Season 1)
+        dt.startSeason = pickedSeason(dt.series.Id, dt.seasons) || startSeasonId(dt.seasons, dt.nextUp);
         // No next-up yet (never watched): first episode of the start season
         if (!dt.nextUp) dt.nextUp = episodesOf(dt.allEpisodes, dt.startSeason)[0] || null;
       }
@@ -337,6 +338,14 @@
     loadSeriesData(seriesId).then(preloadPictures, function () {});
   }
 
+  function pickedSeason(seriesId, seasons) {
+    var m = {}; try { m = JSON.parse(sessionStorage.getItem('ivf-season-pick') || '{}'); } catch (e) {}
+    var id = m[seriesId];
+    return id && seasons.some(function (s) { return s.Id === id; }) ? id : null;
+  }
+  function rememberSeason(seriesId, seasonId) {
+    try { var m = JSON.parse(sessionStorage.getItem('ivf-season-pick') || '{}'); m[seriesId] = seasonId; sessionStorage.setItem('ivf-season-pick', JSON.stringify(m)); } catch (e) {}
+  }
   // IvanaFin resolveStartSeason: next-up episode's season, else the first regular season
   function startSeasonId(seasons, nextUp) {
     if (nextUp && nextUp.SeasonId && seasons.some(function (s) { return s.Id === nextUp.SeasonId; })) return nextUp.SeasonId;
@@ -390,6 +399,7 @@
       // the Season button keeps the focus, no scroll; Down then goes on to episode 1.
       if (id !== st.seasonId) {
         st.lastEpIdx = 0; st.lastKind = 'season';
+        if (st.series) rememberSeason(st.series.Id, id);
         renderSeason(st, id, false);
       }
       if (opener && opener.focus) opener.focus({ preventScroll: true });

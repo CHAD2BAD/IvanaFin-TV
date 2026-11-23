@@ -3664,6 +3664,8 @@ window.IvfWebLoaded = true;
       R + '.hart.sq{width:' + d(230) + ';height:' + d(230) + ';top:calc(' + d(24) + ' + var(--ivf-mu-hd,0px));right:' + d(40) + ';border-radius:' + d(8) + ';background-size:cover;background-position:center;opacity:1;' +
         'box-shadow:0 ' + d(8) + ' ' + d(24) + ' rgba(0,0,0,.45);-webkit-mask-image:none;mask-image:none}',
       R + '.hart.liked{background-image:linear-gradient(135deg,#450af5,#8e8ee5 60%,#c4efd9);background-size:cover}',
+      // (round 8: tabs still hard to read over pale artist photos - darken the photo's top under the bar)
+      R + '.hart:not(.sq):not(.liked)::after{content:"";position:absolute;left:0;right:0;top:0;height:60%;pointer-events:none;background:linear-gradient(rgba(0,0,0,.75),rgba(0,0,0,.35) 45%,rgba(0,0,0,0))}',
       R + '.hart .hk{position:absolute;right:22%;top:30%;font-size:' + d(110) + ';color:rgba(255,255,255,.9)}',
       R + '.hero{position:relative;padding:' + d(124) + ' ' + d(40) + ' 0;min-height:' + d(141) + ';box-sizing:content-box;max-width:52%}',
       R + '.hk2{font-size:' + d(10) + ';font-weight:500;color:rgba(255,255,255,.7);margin-bottom:' + d(4) + '}',
@@ -3906,7 +3908,7 @@ window.IvfWebLoaded = true;
       R + '.npbar.scr .bub{display:block}',
       // Up next
       R + '.npq{margin-top:' + d(30) + '}' + R + '.npq h2{font-size:' + d(16) + ';font-weight:700;margin-bottom:' + d(6) + '}',
-      R + '.qr{display:flex;align-items:center;gap:' + d(8) + ';width:' + d(640) + ';max-width:100%;height:' + d(44) + ';margin-left:' + d(-10) + ';padding:0 ' + d(10) + ';border-radius:' + d(4) + ';box-sizing:border-box}',
+      R + '.qr{display:flex;align-items:center;gap:' + d(8) + ';width:100%;height:' + d(44) + ';margin-left:' + d(-10) + ';padding:0 ' + d(10) + ';border-radius:' + d(4) + ';box-sizing:border-box}',
       R + '.qr .qx{flex:1;min-width:0}' + R + '.qr .qt{font-size:' + d(13) + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' + R + '.qr .qa{font-size:' + d(11) + ';color:rgba(255,255,255,.65);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
       R + '.qr .qd{font-size:' + d(11) + ';color:rgba(255,255,255,.65);font-variant-numeric:tabular-nums}',
       R + '.qr .qb{width:' + d(28) + ';height:' + d(28) + ';border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:rgba(255,255,255,.8);visibility:hidden}' + R + '.qr .qb .material-icons{font-size:' + d(18) + '}',
@@ -4418,7 +4420,7 @@ window.IvfWebLoaded = true;
       if (al.length >= 2) out.push({ key: 'era' + dd, name: dd + 's Mix', sub: al.length + ' albums', covers: shuffle(al).slice(0, 4).map(function (a) { return a.Id; }), albumIds: al.map(function (a) { return a.Id; }) });
     });
     var tapes = all.filter(function (a) { return albumType(a) === 'mixtape'; });
-    if (tapes.length >= 2) out.push({ key: 'tapes', name: 'Mixtapes & More Mix', sub: tapes.length + ' mixtapes', covers: shuffle(tapes).slice(0, 4).map(function (a) { return a.Id; }), albumIds: tapes.map(function (a) { return a.Id; }) });
+    if (tapes.length >= 2) out.push({ key: 'tapes', name: 'Mixtapes Mix', sub: tapes.length + ' mixtapes', covers: shuffle(tapes).slice(0, 4).map(function (a) { return a.Id; }), albumIds: tapes.map(function (a) { return a.Id; }) });
     return out;
   }
   function mixCard(m) {
@@ -5155,11 +5157,31 @@ window.IvfWebLoaded = true;
     }, function () {});
   }
   function listPlaying() { var t = view && view.data && view.data.tracks; return !!(t && now.id && t.some(function (x) { return x.Id === now.id; })); }
+  function queueAlbumAfter(tid) {
+    ApiClient.getJSON(ApiClient.getUrl('/Users/' + uid() + '/Items/' + tid)).then(function (t) {
+      if (!t || !t.AlbumId) return;
+      return ApiClient.getJSON(ApiClient.getUrl('/Users/' + uid() + '/Items', { ParentId: t.AlbumId, IncludeItemTypes: 'Audio', Recursive: true, SortBy: 'ParentIndexNumber,IndexNumber,SortName' })).then(function (r) {
+        var all = ((r && r.Items) || []).map(function (x) { return x.Id; }), i = all.indexOf(tid), rest = i >= 0 ? all.slice(i + 1) : [];
+        if (!rest.length) return;
+        var tries = 0, timer = setInterval(function () {
+          var m = pm(), p = m && m.getCurrentPlayer(), st = p && m.getPlayerState(p), cur = st && st.NowPlayingItem;
+          if (cur && cur.Id === tid) {
+            clearInterval(timer);
+            if (playFrom) rest.forEach(function (x) { playFrom.ids[x] = 1; });
+            try { m.queue({ ids: rest, serverId: ApiClient.serverId() }, p); } catch (e) {}
+            setTimeout(function () { loadQueue(); }, 500);
+          } else if (++tries > 40) clearInterval(timer);
+        }, 250);
+      });
+    }, function () {});
+  }
   function playRow(el) {
     var tid = el.getAttribute('data-id');
     if (tid === now.id) { ctl('pp'); return; }
     var list = (view.data && view.data.tracks) || [];
-    if (view.v === 'search') { playTracks([tid], 0); return; }
+    // (a song from Search: start it at once - the TV only lets audio start inside the key press - then queue the
+    // rest of its album after it, so Next and Up next work; round 8: Next did nothing, Up next was empty)
+    if (view.v === 'search') { playTracks([tid], 0); queueAlbumAfter(tid); return; }
     var from = view.v === 'liked' ? { k: 'PLAYLIST', n: 'Liked Songs' } : view.v === 'playlist' && view.data.item ? { k: 'PLAYLIST', n: view.data.item.Name } : null;
     playTracks(ids(list), +el.getAttribute('data-i'), from);
   }
@@ -6069,7 +6091,19 @@ window.IvfWebLoaded = true;
     if (h) { h.classList.remove("osdHeader-hidden"); h.classList.remove("hide"); }
     held = true;
   }
-  // Jellyfin hides by adding classes: undo it at once while paused
+  // Web (round 8 beta): with the controls hidden, a click where the Back arrow sits (top-left) paused the film
+  // (the click went to the picture) - a click in the top strip while hidden only brings the controls back
+  function hiddenOsd() { var h = document.querySelector(".skinHeader.osdHeader"); return !!(h && (h.classList.contains("osdHeader-hidden") || h.classList.contains("hide"))); }
+  ["pointerdown", "mousedown", "click", "pointerup", "mouseup"].forEach(function (t) {
+    document.addEventListener(t, function (e) {
+      if (!video() || !document.querySelector(".videoOsdBottom") || e.clientY > 110 || !hiddenOsd()) return;
+      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+      if (t === "click") {
+        var o = { bubbles: true, clientX: e.clientX, clientY: e.clientY, screenX: e.screenX, screenY: e.screenY, pointerType: "mouse" };
+        [0, 40].forEach(function (dx) { o.clientX = e.clientX + dx; o.screenX = e.screenX + dx; try { document.dispatchEvent(new PointerEvent("pointermove", o)); } catch (x) {} document.dispatchEvent(new MouseEvent("mousemove", o)); });
+      }
+    }, true);
+  });  // Jellyfin hides by adding classes: undo it at once while paused
   new MutationObserver(function () { if (pausedNow()) { var b = document.querySelector(".videoOsdBottom"); if (b && (b.classList.contains("videoOsdBottom-hidden") || b.classList.contains("hide"))) unhide(); } })
     .observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ["class"] });
   document.addEventListener("pause", function (e) { if (e.target && e.target.tagName === "VIDEO") setTimeout(function () { if (pausedNow()) unhide(); }, 0); }, true);
@@ -6631,7 +6665,7 @@ window.IvfWebLoaded = true;
       '.ivf-sr-scroll{position:absolute;top:' + d(68) + ';left:0;right:0;bottom:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding-bottom:' + d(44) + ';box-sizing:border-box;scroll-behavior:smooth}',
       '.ivf-sr-scroll::-webkit-scrollbar{display:none}',
       '.ivf-sr-row{margin-top:' + d(12) + '}',
-      '.ivf-sr-row h3{margin:0 0 ' + d(2) + ' ' + d(56) + ';font-size:' + d(22) + ';font-weight:400;line-height:' + d(28) + ';color:#d1d5db}',
+      '.ivf-sr-row h3{margin:0 0 ' + d(2) + ' ' + d(64) + ';font-size:' + d(22) + ';font-weight:400;line-height:' + d(28) + ';color:#d1d5db}',
       '.ivf-sr-strip{display:flex;gap:' + d(16) + ';overflow-x:auto;overflow-y:hidden;scrollbar-width:none;padding:' + d(14) + ' ' + d(40) + ' ' + d(14) + ' ' + d(64) + ';scroll-behavior:smooth;align-items:flex-start}', // (room for the grown, ringed poster - round 5: its ring was cut at the top)
       '.ivf-sr-strip::-webkit-scrollbar{display:none}',
       '.ivf-sr-card{flex:none;width:' + d(115) + ';display:flex;flex-direction:column;align-items:center;background:none;border:0;padding:0;color:#d1d5db;font:inherit;cursor:pointer;outline:none}',
@@ -7195,7 +7229,8 @@ window.IvfWebLoaded = true;
     ]).then(function (res) {
       var dt = { series: res[0], seasons: res[1], nextUp: res[2], allEpisodes: res[3] };
       if (dt.series && dt.series.Type === 'Series' && dt.seasons.length) {
-        dt.startSeason = startSeasonId(dt.seasons, dt.nextUp);
+        // (round 8: a season picked earlier in this visit to the app is shown again - Miranda went back to Season 1)
+        dt.startSeason = pickedSeason(dt.series.Id, dt.seasons) || startSeasonId(dt.seasons, dt.nextUp);
         // No next-up yet (never watched): first episode of the start season
         if (!dt.nextUp) dt.nextUp = episodesOf(dt.allEpisodes, dt.startSeason)[0] || null;
       }
@@ -7218,6 +7253,14 @@ window.IvfWebLoaded = true;
     loadSeriesData(seriesId).then(preloadPictures, function () {});
   }
 
+  function pickedSeason(seriesId, seasons) {
+    var m = {}; try { m = JSON.parse(sessionStorage.getItem('ivf-season-pick') || '{}'); } catch (e) {}
+    var id = m[seriesId];
+    return id && seasons.some(function (s) { return s.Id === id; }) ? id : null;
+  }
+  function rememberSeason(seriesId, seasonId) {
+    try { var m = JSON.parse(sessionStorage.getItem('ivf-season-pick') || '{}'); m[seriesId] = seasonId; sessionStorage.setItem('ivf-season-pick', JSON.stringify(m)); } catch (e) {}
+  }
   // IvanaFin resolveStartSeason: next-up episode's season, else the first regular season
   function startSeasonId(seasons, nextUp) {
     if (nextUp && nextUp.SeasonId && seasons.some(function (s) { return s.Id === nextUp.SeasonId; })) return nextUp.SeasonId;
@@ -7271,6 +7314,7 @@ window.IvfWebLoaded = true;
       // the Season button keeps the focus, no scroll; Down then goes on to episode 1.
       if (id !== st.seasonId) {
         st.lastEpIdx = 0; st.lastKind = 'season';
+        if (st.series) rememberSeason(st.series.Id, id);
         renderSeason(st, id, false);
       }
       if (opener && opener.focus) opener.focus({ preventScroll: true });
@@ -8255,6 +8299,92 @@ window.IvfSwPlanets = {"version":"2026-11-19","credit":"Pictures: Wookieepedia (
 })();
 
 } catch (e) { console.error('IvanaFin script sw-timeline failed:', e); } })();
+/* IvanaFin - tv-text-boxes */
+(function() { try {
+// IvanaFin (Samsung TV app only): text boxes don't open the on-screen keyboard just by being selected.
+// (user 2026-11-23: moving through Settings, every text box on the way popped the keyboard up, so a setting
+// under three boxes meant closing the keyboard three times.) A text box is read-only while it is only
+// selected - Up / Down / Left / Right move on as from any other option. OK on it unlocks it and opens the
+// keyboard; leaving it (or Up / Down once the keyboard is closed) locks it again.
+(function () {
+  'use strict';
+  if (typeof tizen === 'undefined' || window.__ivfTvTextBoxes) return;
+  window.__ivfTvTextBoxes = true;
+
+  var TEXT = { text: 1, search: 1, password: 1, email: 1, number: 1, url: 1, tel: 1, '': 1 };
+  function isBox(el) {
+    if (!el || !el.tagName) return false;
+    if (el.tagName === 'TEXTAREA') return true;
+    return el.tagName === 'INPUT' && TEXT[(el.getAttribute('type') || '').toLowerCase()] === 1;
+  }
+  // lock a box (remember whether the page itself made it read-only - those stay read-only)
+  function lock(el) {
+    if (!isBox(el) || el.hasAttribute('data-ivf-tvro') || el.disabled) return;
+    if (el.readOnly) { el.setAttribute('data-ivf-tvro', 'page'); return; }
+    el.setAttribute('data-ivf-tvro', '1');
+    el.readOnly = true;
+  }
+  var opening = false;
+  function relock(el) {
+    if (opening || !el || el.getAttribute('data-ivf-tvro') !== 'open') return;
+    el.setAttribute('data-ivf-tvro', '1');
+    el.readOnly = true;
+  }
+  function lockAll(root) {
+    if (!root || !root.querySelectorAll) return;
+    if (isBox(root)) lock(root);
+    var l = root.querySelectorAll('input, textarea');
+    for (var i = 0; i < l.length; i++) lock(l[i]);
+  }
+  // new boxes are locked as soon as they appear, before anything can select them
+  new MutationObserver(function (recs) {
+    for (var i = 0; i < recs.length; i++) {
+      var a = recs[i].addedNodes;
+      for (var j = 0; j < a.length; j++) if (a[j].nodeType === 1) lockAll(a[j]);
+    }
+  }).observe(document.documentElement, { childList: true, subtree: true });
+  lockAll(document.documentElement);
+
+  // a box selected before it was locked (e.g. selected by the page as it opened): lock it, then select it
+  // again so the keyboard goes away
+  document.addEventListener('focusin', function (e) {
+    var el = e.target;
+    if (!isBox(el) || el.hasAttribute('data-ivf-tvro')) return;
+    lock(el);
+    if (el.readOnly) { el.blur(); el.focus(); }
+  }, true);
+  document.addEventListener('focusout', function (e) { relock(e.target); }, true);
+
+  function open(el) {
+    el.setAttribute('data-ivf-tvro', 'open');
+    el.readOnly = false;
+    // selecting it again makes the TV open its keyboard for it
+    opening = true;
+    el.blur();
+    el.focus();
+    opening = false;
+    try { var n = el.value.length; el.setSelectionRange(n, n); } catch (x) {}
+  }
+  document.addEventListener('keydown', function (e) {
+    var el = document.activeElement, k = e.keyCode;
+    if (!isBox(el)) return;
+    var st = el.getAttribute('data-ivf-tvro');
+    if ((k === 13 || e.key === 'Enter') && st === '1') {
+      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+      open(el);
+      return;
+    }
+    // keyboard closed, still on the box: Up / Down move on and lock it again
+    if (st === 'open' && (k === 38 || k === 40)) relock(el);
+  }, true);
+  // a pointer (Samsung remote with pointer): clicking the box opens it too
+  document.addEventListener('click', function (e) {
+    var el = e.target;
+    if (isBox(el) && el.getAttribute('data-ivf-tvro') === '1') open(el);
+  }, true);
+})();
+
+} catch (e) { console.error('IvanaFin script tv-text-boxes failed:', e); } })();
 /* IvanaFin - welcome-screen */
 (function() { try {
 // IvanaFin welcome screen: shown once per app session while Home loads (icon font, library tile

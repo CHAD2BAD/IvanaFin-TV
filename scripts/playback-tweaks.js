@@ -152,7 +152,19 @@
     if (h) { h.classList.remove("osdHeader-hidden"); h.classList.remove("hide"); }
     held = true;
   }
-  // Jellyfin hides by adding classes: undo it at once while paused
+  // Web (round 8 beta): with the controls hidden, a click where the Back arrow sits (top-left) paused the film
+  // (the click went to the picture) - a click in the top strip while hidden only brings the controls back
+  function hiddenOsd() { var h = document.querySelector(".skinHeader.osdHeader"); return !!(h && (h.classList.contains("osdHeader-hidden") || h.classList.contains("hide"))); }
+  ["pointerdown", "mousedown", "click", "pointerup", "mouseup"].forEach(function (t) {
+    document.addEventListener(t, function (e) {
+      if (!video() || !document.querySelector(".videoOsdBottom") || e.clientY > 110 || !hiddenOsd()) return;
+      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+      if (t === "click") {
+        var o = { bubbles: true, clientX: e.clientX, clientY: e.clientY, screenX: e.screenX, screenY: e.screenY, pointerType: "mouse" };
+        [0, 40].forEach(function (dx) { o.clientX = e.clientX + dx; o.screenX = e.screenX + dx; try { document.dispatchEvent(new PointerEvent("pointermove", o)); } catch (x) {} document.dispatchEvent(new MouseEvent("mousemove", o)); });
+      }
+    }, true);
+  });  // Jellyfin hides by adding classes: undo it at once while paused
   new MutationObserver(function () { if (pausedNow()) { var b = document.querySelector(".videoOsdBottom"); if (b && (b.classList.contains("videoOsdBottom-hidden") || b.classList.contains("hide"))) unhide(); } })
     .observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ["class"] });
   document.addEventListener("pause", function (e) { if (e.target && e.target.tagName === "VIDEO") setTimeout(function () { if (pausedNow()) unhide(); }, 0); }, true);

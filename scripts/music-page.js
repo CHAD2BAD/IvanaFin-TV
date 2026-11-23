@@ -119,6 +119,8 @@
       R + '.hart.sq{width:' + d(230) + ';height:' + d(230) + ';top:calc(' + d(24) + ' + var(--ivf-mu-hd,0px));right:' + d(40) + ';border-radius:' + d(8) + ';background-size:cover;background-position:center;opacity:1;' +
         'box-shadow:0 ' + d(8) + ' ' + d(24) + ' rgba(0,0,0,.45);-webkit-mask-image:none;mask-image:none}',
       R + '.hart.liked{background-image:linear-gradient(135deg,#450af5,#8e8ee5 60%,#c4efd9);background-size:cover}',
+      // (round 8: tabs still hard to read over pale artist photos - darken the photo's top under the bar)
+      R + '.hart:not(.sq):not(.liked)::after{content:"";position:absolute;left:0;right:0;top:0;height:60%;pointer-events:none;background:linear-gradient(rgba(0,0,0,.75),rgba(0,0,0,.35) 45%,rgba(0,0,0,0))}',
       R + '.hart .hk{position:absolute;right:22%;top:30%;font-size:' + d(110) + ';color:rgba(255,255,255,.9)}',
       R + '.hero{position:relative;padding:' + d(124) + ' ' + d(40) + ' 0;min-height:' + d(141) + ';box-sizing:content-box;max-width:52%}',
       R + '.hk2{font-size:' + d(10) + ';font-weight:500;color:rgba(255,255,255,.7);margin-bottom:' + d(4) + '}',
@@ -361,7 +363,7 @@
       R + '.npbar.scr .bub{display:block}',
       // Up next
       R + '.npq{margin-top:' + d(30) + '}' + R + '.npq h2{font-size:' + d(16) + ';font-weight:700;margin-bottom:' + d(6) + '}',
-      R + '.qr{display:flex;align-items:center;gap:' + d(8) + ';width:' + d(640) + ';max-width:100%;height:' + d(44) + ';margin-left:' + d(-10) + ';padding:0 ' + d(10) + ';border-radius:' + d(4) + ';box-sizing:border-box}',
+      R + '.qr{display:flex;align-items:center;gap:' + d(8) + ';width:100%;height:' + d(44) + ';margin-left:' + d(-10) + ';padding:0 ' + d(10) + ';border-radius:' + d(4) + ';box-sizing:border-box}',
       R + '.qr .qx{flex:1;min-width:0}' + R + '.qr .qt{font-size:' + d(13) + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' + R + '.qr .qa{font-size:' + d(11) + ';color:rgba(255,255,255,.65);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
       R + '.qr .qd{font-size:' + d(11) + ';color:rgba(255,255,255,.65);font-variant-numeric:tabular-nums}',
       R + '.qr .qb{width:' + d(28) + ';height:' + d(28) + ';border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:rgba(255,255,255,.8);visibility:hidden}' + R + '.qr .qb .material-icons{font-size:' + d(18) + '}',
@@ -873,7 +875,7 @@
       if (al.length >= 2) out.push({ key: 'era' + dd, name: dd + 's Mix', sub: al.length + ' albums', covers: shuffle(al).slice(0, 4).map(function (a) { return a.Id; }), albumIds: al.map(function (a) { return a.Id; }) });
     });
     var tapes = all.filter(function (a) { return albumType(a) === 'mixtape'; });
-    if (tapes.length >= 2) out.push({ key: 'tapes', name: 'Mixtapes & More Mix', sub: tapes.length + ' mixtapes', covers: shuffle(tapes).slice(0, 4).map(function (a) { return a.Id; }), albumIds: tapes.map(function (a) { return a.Id; }) });
+    if (tapes.length >= 2) out.push({ key: 'tapes', name: 'Mixtapes Mix', sub: tapes.length + ' mixtapes', covers: shuffle(tapes).slice(0, 4).map(function (a) { return a.Id; }), albumIds: tapes.map(function (a) { return a.Id; }) });
     return out;
   }
   function mixCard(m) {
@@ -1610,11 +1612,31 @@
     }, function () {});
   }
   function listPlaying() { var t = view && view.data && view.data.tracks; return !!(t && now.id && t.some(function (x) { return x.Id === now.id; })); }
+  function queueAlbumAfter(tid) {
+    ApiClient.getJSON(ApiClient.getUrl('/Users/' + uid() + '/Items/' + tid)).then(function (t) {
+      if (!t || !t.AlbumId) return;
+      return ApiClient.getJSON(ApiClient.getUrl('/Users/' + uid() + '/Items', { ParentId: t.AlbumId, IncludeItemTypes: 'Audio', Recursive: true, SortBy: 'ParentIndexNumber,IndexNumber,SortName' })).then(function (r) {
+        var all = ((r && r.Items) || []).map(function (x) { return x.Id; }), i = all.indexOf(tid), rest = i >= 0 ? all.slice(i + 1) : [];
+        if (!rest.length) return;
+        var tries = 0, timer = setInterval(function () {
+          var m = pm(), p = m && m.getCurrentPlayer(), st = p && m.getPlayerState(p), cur = st && st.NowPlayingItem;
+          if (cur && cur.Id === tid) {
+            clearInterval(timer);
+            if (playFrom) rest.forEach(function (x) { playFrom.ids[x] = 1; });
+            try { m.queue({ ids: rest, serverId: ApiClient.serverId() }, p); } catch (e) {}
+            setTimeout(function () { loadQueue(); }, 500);
+          } else if (++tries > 40) clearInterval(timer);
+        }, 250);
+      });
+    }, function () {});
+  }
   function playRow(el) {
     var tid = el.getAttribute('data-id');
     if (tid === now.id) { ctl('pp'); return; }
     var list = (view.data && view.data.tracks) || [];
-    if (view.v === 'search') { playTracks([tid], 0); return; }
+    // (a song from Search: start it at once - the TV only lets audio start inside the key press - then queue the
+    // rest of its album after it, so Next and Up next work; round 8: Next did nothing, Up next was empty)
+    if (view.v === 'search') { playTracks([tid], 0); queueAlbumAfter(tid); return; }
     var from = view.v === 'liked' ? { k: 'PLAYLIST', n: 'Liked Songs' } : view.v === 'playlist' && view.data.item ? { k: 'PLAYLIST', n: view.data.item.Name } : null;
     playTracks(ids(list), +el.getAttribute('data-i'), from);
   }

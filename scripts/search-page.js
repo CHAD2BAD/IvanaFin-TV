@@ -57,7 +57,7 @@
       '.ivf-sr-scroll{position:absolute;top:' + d(68) + ';left:0;right:0;bottom:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding-bottom:' + d(44) + ';box-sizing:border-box;scroll-behavior:smooth}',
       '.ivf-sr-scroll::-webkit-scrollbar{display:none}',
       '.ivf-sr-row{margin-top:' + d(12) + '}',
-      '.ivf-sr-row h3{margin:0 0 ' + d(2) + ' ' + d(56) + ';font-size:' + d(22) + ';font-weight:400;line-height:' + d(28) + ';color:#d1d5db}',
+      '.ivf-sr-row h3{margin:0 0 ' + d(2) + ' ' + d(64) + ';font-size:' + d(22) + ';font-weight:400;line-height:' + d(28) + ';color:#d1d5db}',
       '.ivf-sr-strip{display:flex;gap:' + d(16) + ';overflow-x:auto;overflow-y:hidden;scrollbar-width:none;padding:' + d(14) + ' ' + d(40) + ' ' + d(14) + ' ' + d(64) + ';scroll-behavior:smooth;align-items:flex-start}', // (room for the grown, ringed poster - round 5: its ring was cut at the top)
       '.ivf-sr-strip::-webkit-scrollbar{display:none}',
       '.ivf-sr-card{flex:none;width:' + d(115) + ';display:flex;flex-direction:column;align-items:center;background:none;border:0;padding:0;color:#d1d5db;font:inherit;cursor:pointer;outline:none}',
