@@ -112,6 +112,7 @@
       '.ivf-dsc-hero{flex:none;height:' + u(Z.heroH) + ';padding:' + u(6) + ' ' + u(Z.padX) + ' 0;box-sizing:border-box;max-width:52%;overflow:hidden}',
       '.ivf-dsc-hero h2{margin:0;font-size:' + u(Z.title) + ';font-weight:700;line-height:1.15;text-shadow:0 1px 8px rgba(0,0,0,.6)}',
       '.ivf-dsc-sub{margin-top:' + u(4) + ';font-size:' + u(Z.sub) + ';font-weight:600;opacity:.95}',
+      '.ivf-dsc-sub .dot{margin:0 ' + u(8) + ';opacity:.8}.ivf-dsc-sub .ivf-dd-tomato{width:1em;height:1em;vertical-align:-0.12em;margin-left:' + u(4) + '}',
       '.ivf-dsc-ov{margin-top:' + u(6) + ';font-size:' + u(Z.ov) + ';line-height:1.4;opacity:.92;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-shadow:0 1px 6px rgba(0,0,0,.7)' +
         (Z.ovW ? ';max-width:' + u(Z.ovW) : '') + '}',
       // web: the whole overview, never cut off - no 3-line limit; fitHero() makes the text smaller when a
@@ -148,13 +149,13 @@
       '.ivf-dsc-grid{display:grid;grid-template-columns:repeat(auto-fill,' + u(Z.cardW) + ');justify-content:space-between;align-items:start;row-gap:' + u(Z.gap + 4) + ';',
       'column-gap:' + u(Z.gap) + ';padding:' + u(10) + ' ' + u(Z.padX) + ' 0}',
       '.ivf-dsc-msg{padding:' + u(30) + ' ' + u(Z.padX) + ';font-size:' + u(Z.tab - 1) + ';opacity:.75}',
-      '.ivf-dsc-search{display:flex;justify-content:center;padding:' + u(8) + ' ' + u(Z.padX) + ' 0;flex:none}',
+      '.ivf-dsc-search{display:flex;justify-content:center;padding:' + u(8) + ' ' + u(Z.padX) + ' ' + u(10) + ';flex:none}',
       '.ivf-dsc-search input{width:calc(' + d + ' * 380);max-width:100%;box-sizing:border-box;padding:calc(' + d + ' * 9) calc(' + d + ' * 18);border-radius:999px;',
       'border:calc(' + d + ' * 1) solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:#d1d5db;font:inherit;font-size:calc(' + d + ' * 13);outline:none}',
       '.ivf-dsc-search input:focus{border-color:#fff;background:rgba(255,255,255,.16)}',
       // grids (Movies, TV Shows, Search, Requests), once scrolled: posters fade out under the tabs / search box instead
       // of being cut at a hard line (round-5 beta, web search; round 6: Samsung + web Movies grid too)
-      '.ivf-dsc-scroll.ivf-dsc-scd:not(.ivf-dsc-rows){-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 ' + u(36) + ');mask-image:linear-gradient(to bottom,transparent 0,#000 ' + u(36) + ')}'
+      '.ivf-dsc-scroll.ivf-dsc-scd:not(.ivf-dsc-rows){-webkit-mask-image:linear-gradient(to bottom,transparent ' + u(14) + ',#000 ' + u(44) + ');mask-image:linear-gradient(to bottom,transparent ' + u(14) + ',#000 ' + u(44) + ')}'
     ].join('') + detailStyle(u);
     document.head.appendChild(s);
   }
@@ -192,24 +193,63 @@
     var hero = root.querySelector('.ivf-dsc-hero');
     if (!hero || !item || heroFor === item) return;
     heroFor = item;
-    var bits = [];
-    var y = yearOf(item); if (y) bits.push(y);
-    if (item.voteAverage) bits.push(item.voteAverage.toFixed(1) + '★');
     hero.innerHTML = '<h2>' + esc(titleOf(item)) + '</h2>' +
-      (bits.length ? '<div class="ivf-dsc-sub">' + esc(bits.join('  •  ')) + '</div>' : '') +
+      '<div class="ivf-dsc-sub">' + heroSub(item) + '</div>' +
       (item.overview ? '<div class="ivf-dsc-ov">' + esc(item.overview) + '</div>' : '');
     if (!TV) fitHero(hero);
     setBackdrop(item);
+    heroCritic(item, function () {
+      var sub = heroFor === item && hero.querySelector('.ivf-dsc-sub');
+      if (sub) sub.innerHTML = heroSub(item);
+    });
+  }
+  // "year • 7.6★ • 83%🍅": TMDB rating + Rotten Tomatoes critics score (fetched once per title, kept)
+  var critics = {};
+  function heroSub(item) {
+    var bits = [];
+    var y = yearOf(item); if (y) bits.push(esc(String(y)));
+    var c = critics[typeOf(item) + item.id] || {};
+    // the title's own page's TMDB number once known (Discover's lists carry an older copy: Hexed 6.8 vs 8.2)
+    var va = c.va != null ? c.va : item.voteAverage;
+    if (va) bits.push(va.toFixed(1) + '★');
+    if (c.rt != null) bits.push(c.rt + '%' + tomato(c.rt >= 60));
+    return bits.join('<span class="dot">•</span>');
+  }
+  var criticTimer = null;
+  function heroCritic(item, done) {
+    var type = typeOf(item), key = type + item.id;
+    if (key in critics) return;
+    clearTimeout(criticTimer);
+    // only for the title the header settles on (moving along a row changes it every press)
+    criticTimer = setTimeout(function () {
+      if (heroFor !== item || key in critics) return;
+      var c = critics[key] = {};
+      get(type + '/' + item.id).then(function (m) {
+        if (m && m.voteAverage != null && m.voteAverage !== item.voteAverage) { c.va = m.voteAverage; done(); }
+      }, function () {});
+      get(type === 'movie' ? 'movie/' + item.id + '/ratingscombined' : 'tv/' + item.id + '/ratings').then(function (r) {
+        var rt = r && (r.rt || (r.criticsScore != null ? r : null));
+        if (rt && rt.criticsScore != null) { c.rt = rt.criticsScore; done(); }
+      }, function () {});
+    }, 400);
   }
   // Web: shrink the overview text (down to 70%) until title + overview fit in the header
   function fitHero(hero) {
     var ov = hero.querySelector('.ivf-dsc-ov');
     if (!ov) return;
-    ov.style.fontSize = '';
+    ov.style.fontSize = ''; ov.style.display = ''; ov.style.webkitLineClamp = ''; ov.style.overflow = '';
     var base = parseFloat(getComputedStyle(ov).fontSize) || 14, size = base;
     while (hero.scrollHeight > hero.clientHeight + 1 && size > base * 0.7) {
       size -= base * 0.05;
       ov.style.fontSize = size + 'px';
+    }
+    // still too long at 70%: end it cleanly with "..." on the last line that fits (round 9: half a line
+    // showed under the next row's heading)
+    var over = hero.scrollHeight - hero.clientHeight;
+    if (over > 1) {
+      var lh = parseFloat(getComputedStyle(ov).lineHeight) || size * 1.4;
+      var lines = Math.max(1, Math.floor((ov.offsetHeight - over) / lh));
+      ov.style.display = '-webkit-box'; ov.style.webkitBoxOrient = 'vertical'; ov.style.webkitLineClamp = String(lines); ov.style.overflow = 'hidden';
     }
   }
   window.addEventListener('resize', function () {
@@ -637,7 +677,7 @@
       get(type === 'movie' ? 'movie/' + id + '/ratingscombined' : 'tv/' + id + '/ratings').then(function (r) {
         var rt = r && (r.rt || (r.criticsScore != null || r.audienceScore != null ? r : null));
         if (!rt) return;
-        d.rating = { critic: rt.criticsScore, audience: type === 'movie' && rt.audienceScore != null ? rt.audienceScore / 10 : null };
+        d.rating = { critic: rt.criticsScore };
         var q = d.el.querySelector('.ivf-dd-quick');
         if (q) q.innerHTML = quickHtml(d);
       }, function () {});
@@ -671,8 +711,8 @@
       if (m.numberOfSeasons) bits.push(m.numberOfSeasons + (m.numberOfSeasons === 1 ? ' season' : ' seasons'));
     }
     var r = d.rating;
-    if (r && r.audience != null) bits.push(r.audience.toFixed(1) + '★');
-    else if (!r && m.voteAverage) bits.push(m.voteAverage.toFixed(1) + '★');
+    // ★ = the TMDB rating everywhere (Discover header, title page, library pages); Rotten Tomatoes as the 🍅 %
+    if (m.voteAverage) bits.push(m.voteAverage.toFixed(1) + '★');
     if (r && r.critic != null) bits.push(r.critic + '%' + tomato(r.critic >= 60));
     return bits.join('<span class="dot">•</span>');
   }

@@ -153,6 +153,15 @@
         setMode(mode() === 'timeline' ? 'release' : 'timeline');
         apply(TV ? page : (document.querySelector('.page.libraryPage:not(.hide)') || page));
       });
+      // TV: Down from the button = the first poster (round-9 beta, LG: it went to the poster under the
+      // button, 4th along, after a re-sort that left no poster looking selected)
+      if (TV) bar.querySelector('button').addEventListener('keydown', function (e) {
+        if (e.key !== 'ArrowDown' && e.keyCode !== 40) return;
+        var g = apply._grid, first = g && g.querySelector('.card');
+        if (!first) return;
+        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+        first.focus();
+      });
     }
     bar.querySelector('.ivf-swt-lbl').textContent = 'Order: ' + (tl ? 'Star Wars timeline' : 'Release date');
     if (!TV) placeInHeader(bar);

@@ -2291,7 +2291,13 @@
     if (!opts.length) return;
     // nearest row (or column) first, then the closest item in it
     var minGap = Math.min.apply(null, opts.map(function (o) { return o.gap; }));
-    opts.filter(function (o) { return o.gap <= minGap + px(12); }).forEach(function (o) { if (!best || o.side < best.side) best = o; });
+    // Down from the Library tabs (Albums / Artists / Playlists): the first card of the grid, not the one
+    // under the tab (round-9 beta, LG: Albums -> the 3rd album)
+    var fromTabs = dir === 'd' && a.classList.contains('chip') && !a.classList.contains('sort');
+    opts.filter(function (o) { return o.gap <= minGap + px(12); }).forEach(function (o) {
+      if (fromTabs) { if (!best || o.el.getBoundingClientRect().left < best.el.getBoundingClientRect().left) best = o; }
+      else if (!best || o.side < best.side) best = o;
+    });
     var to = best.el;
     // into the top bar from the page: the page's own tab; out of the top bar: back where we were
     if (dir === 'u' && !inTop && topEl.contains(to) && !to.classList.contains('mini')) to = topEl.querySelector('.nv.on') || to;

@@ -204,6 +204,7 @@ window.IvfWebLoaded = true;
       '.ivf-dsc-hero{flex:none;height:' + u(Z.heroH) + ';padding:' + u(6) + ' ' + u(Z.padX) + ' 0;box-sizing:border-box;max-width:52%;overflow:hidden}',
       '.ivf-dsc-hero h2{margin:0;font-size:' + u(Z.title) + ';font-weight:700;line-height:1.15;text-shadow:0 1px 8px rgba(0,0,0,.6)}',
       '.ivf-dsc-sub{margin-top:' + u(4) + ';font-size:' + u(Z.sub) + ';font-weight:600;opacity:.95}',
+      '.ivf-dsc-sub .dot{margin:0 ' + u(8) + ';opacity:.8}.ivf-dsc-sub .ivf-dd-tomato{width:1em;height:1em;vertical-align:-0.12em;margin-left:' + u(4) + '}',
       '.ivf-dsc-ov{margin-top:' + u(6) + ';font-size:' + u(Z.ov) + ';line-height:1.4;opacity:.92;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-shadow:0 1px 6px rgba(0,0,0,.7)' +
         (Z.ovW ? ';max-width:' + u(Z.ovW) : '') + '}',
       // web: the whole overview, never cut off - no 3-line limit; fitHero() makes the text smaller when a
@@ -240,13 +241,13 @@ window.IvfWebLoaded = true;
       '.ivf-dsc-grid{display:grid;grid-template-columns:repeat(auto-fill,' + u(Z.cardW) + ');justify-content:space-between;align-items:start;row-gap:' + u(Z.gap + 4) + ';',
       'column-gap:' + u(Z.gap) + ';padding:' + u(10) + ' ' + u(Z.padX) + ' 0}',
       '.ivf-dsc-msg{padding:' + u(30) + ' ' + u(Z.padX) + ';font-size:' + u(Z.tab - 1) + ';opacity:.75}',
-      '.ivf-dsc-search{display:flex;justify-content:center;padding:' + u(8) + ' ' + u(Z.padX) + ' 0;flex:none}',
+      '.ivf-dsc-search{display:flex;justify-content:center;padding:' + u(8) + ' ' + u(Z.padX) + ' ' + u(10) + ';flex:none}',
       '.ivf-dsc-search input{width:calc(' + d + ' * 380);max-width:100%;box-sizing:border-box;padding:calc(' + d + ' * 9) calc(' + d + ' * 18);border-radius:999px;',
       'border:calc(' + d + ' * 1) solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:#d1d5db;font:inherit;font-size:calc(' + d + ' * 13);outline:none}',
       '.ivf-dsc-search input:focus{border-color:#fff;background:rgba(255,255,255,.16)}',
       // grids (Movies, TV Shows, Search, Requests), once scrolled: posters fade out under the tabs / search box instead
       // of being cut at a hard line (round-5 beta, web search; round 6: Samsung + web Movies grid too)
-      '.ivf-dsc-scroll.ivf-dsc-scd:not(.ivf-dsc-rows){-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 ' + u(36) + ');mask-image:linear-gradient(to bottom,transparent 0,#000 ' + u(36) + ')}'
+      '.ivf-dsc-scroll.ivf-dsc-scd:not(.ivf-dsc-rows){-webkit-mask-image:linear-gradient(to bottom,transparent ' + u(14) + ',#000 ' + u(44) + ');mask-image:linear-gradient(to bottom,transparent ' + u(14) + ',#000 ' + u(44) + ')}'
     ].join('') + detailStyle(u);
     document.head.appendChild(s);
   }
@@ -284,24 +285,63 @@ window.IvfWebLoaded = true;
     var hero = root.querySelector('.ivf-dsc-hero');
     if (!hero || !item || heroFor === item) return;
     heroFor = item;
-    var bits = [];
-    var y = yearOf(item); if (y) bits.push(y);
-    if (item.voteAverage) bits.push(item.voteAverage.toFixed(1) + '★');
     hero.innerHTML = '<h2>' + esc(titleOf(item)) + '</h2>' +
-      (bits.length ? '<div class="ivf-dsc-sub">' + esc(bits.join('  •  ')) + '</div>' : '') +
+      '<div class="ivf-dsc-sub">' + heroSub(item) + '</div>' +
       (item.overview ? '<div class="ivf-dsc-ov">' + esc(item.overview) + '</div>' : '');
     if (!TV) fitHero(hero);
     setBackdrop(item);
+    heroCritic(item, function () {
+      var sub = heroFor === item && hero.querySelector('.ivf-dsc-sub');
+      if (sub) sub.innerHTML = heroSub(item);
+    });
+  }
+  // "year • 7.6★ • 83%🍅": TMDB rating + Rotten Tomatoes critics score (fetched once per title, kept)
+  var critics = {};
+  function heroSub(item) {
+    var bits = [];
+    var y = yearOf(item); if (y) bits.push(esc(String(y)));
+    var c = critics[typeOf(item) + item.id] || {};
+    // the title's own page's TMDB number once known (Discover's lists carry an older copy: Hexed 6.8 vs 8.2)
+    var va = c.va != null ? c.va : item.voteAverage;
+    if (va) bits.push(va.toFixed(1) + '★');
+    if (c.rt != null) bits.push(c.rt + '%' + tomato(c.rt >= 60));
+    return bits.join('<span class="dot">•</span>');
+  }
+  var criticTimer = null;
+  function heroCritic(item, done) {
+    var type = typeOf(item), key = type + item.id;
+    if (key in critics) return;
+    clearTimeout(criticTimer);
+    // only for the title the header settles on (moving along a row changes it every press)
+    criticTimer = setTimeout(function () {
+      if (heroFor !== item || key in critics) return;
+      var c = critics[key] = {};
+      get(type + '/' + item.id).then(function (m) {
+        if (m && m.voteAverage != null && m.voteAverage !== item.voteAverage) { c.va = m.voteAverage; done(); }
+      }, function () {});
+      get(type === 'movie' ? 'movie/' + item.id + '/ratingscombined' : 'tv/' + item.id + '/ratings').then(function (r) {
+        var rt = r && (r.rt || (r.criticsScore != null ? r : null));
+        if (rt && rt.criticsScore != null) { c.rt = rt.criticsScore; done(); }
+      }, function () {});
+    }, 400);
   }
   // Web: shrink the overview text (down to 70%) until title + overview fit in the header
   function fitHero(hero) {
     var ov = hero.querySelector('.ivf-dsc-ov');
     if (!ov) return;
-    ov.style.fontSize = '';
+    ov.style.fontSize = ''; ov.style.display = ''; ov.style.webkitLineClamp = ''; ov.style.overflow = '';
     var base = parseFloat(getComputedStyle(ov).fontSize) || 14, size = base;
     while (hero.scrollHeight > hero.clientHeight + 1 && size > base * 0.7) {
       size -= base * 0.05;
       ov.style.fontSize = size + 'px';
+    }
+    // still too long at 70%: end it cleanly with "..." on the last line that fits (round 9: half a line
+    // showed under the next row's heading)
+    var over = hero.scrollHeight - hero.clientHeight;
+    if (over > 1) {
+      var lh = parseFloat(getComputedStyle(ov).lineHeight) || size * 1.4;
+      var lines = Math.max(1, Math.floor((ov.offsetHeight - over) / lh));
+      ov.style.display = '-webkit-box'; ov.style.webkitBoxOrient = 'vertical'; ov.style.webkitLineClamp = String(lines); ov.style.overflow = 'hidden';
     }
   }
   window.addEventListener('resize', function () {
@@ -729,7 +769,7 @@ window.IvfWebLoaded = true;
       get(type === 'movie' ? 'movie/' + id + '/ratingscombined' : 'tv/' + id + '/ratings').then(function (r) {
         var rt = r && (r.rt || (r.criticsScore != null || r.audienceScore != null ? r : null));
         if (!rt) return;
-        d.rating = { critic: rt.criticsScore, audience: type === 'movie' && rt.audienceScore != null ? rt.audienceScore / 10 : null };
+        d.rating = { critic: rt.criticsScore };
         var q = d.el.querySelector('.ivf-dd-quick');
         if (q) q.innerHTML = quickHtml(d);
       }, function () {});
@@ -763,8 +803,8 @@ window.IvfWebLoaded = true;
       if (m.numberOfSeasons) bits.push(m.numberOfSeasons + (m.numberOfSeasons === 1 ? ' season' : ' seasons'));
     }
     var r = d.rating;
-    if (r && r.audience != null) bits.push(r.audience.toFixed(1) + '★');
-    else if (!r && m.voteAverage) bits.push(m.voteAverage.toFixed(1) + '★');
+    // ★ = the TMDB rating everywhere (Discover header, title page, library pages); Rotten Tomatoes as the 🍅 %
+    if (m.voteAverage) bits.push(m.voteAverage.toFixed(1) + '★');
     if (r && r.critic != null) bits.push(r.critic + '%' + tomato(r.critic >= 60));
     return bits.join('<span class="dot">•</span>');
   }
@@ -5836,7 +5876,13 @@ window.IvfWebLoaded = true;
     if (!opts.length) return;
     // nearest row (or column) first, then the closest item in it
     var minGap = Math.min.apply(null, opts.map(function (o) { return o.gap; }));
-    opts.filter(function (o) { return o.gap <= minGap + px(12); }).forEach(function (o) { if (!best || o.side < best.side) best = o; });
+    // Down from the Library tabs (Albums / Artists / Playlists): the first card of the grid, not the one
+    // under the tab (round-9 beta, LG: Albums -> the 3rd album)
+    var fromTabs = dir === 'd' && a.classList.contains('chip') && !a.classList.contains('sort');
+    opts.filter(function (o) { return o.gap <= minGap + px(12); }).forEach(function (o) {
+      if (fromTabs) { if (!best || o.el.getBoundingClientRect().left < best.el.getBoundingClientRect().left) best = o; }
+      else if (!best || o.side < best.side) best = o;
+    });
     var to = best.el;
     // into the top bar from the page: the page's own tab; out of the top bar: back where we were
     if (dir === 'u' && !inTop && topEl.contains(to) && !to.classList.contains('mini')) to = topEl.querySelector('.nv.on') || to;
@@ -6998,7 +7044,7 @@ window.IvfWebLoaded = true;
       '.ivf-tvs-head{display:flex;flex-direction:column;align-items:center;text-align:center;box-sizing:border-box;padding:0 ' + d(32) + '}',
       '.ivf-tvs-quick{margin-top:' + d(3) + ';font-size:' + d(12) + ';font-weight:500;line-height:' + d(17) + ';letter-spacing:' + d(0.5) + '}',
       '.ivf-tvs-quick .dot{margin:0 ' + d(8) + ';font-size:' + d(10) + ';vertical-align:' + d(2) + '}',
-      '.ivf-tvs-quick .star{color:#f5c518}',
+      '.ivf-tvs-quick .star{color:#f5c518}','.ivf-tvs-tomato{width:1em;height:1em;vertical-align:-0.12em;margin-left:0.15em}',
       '.ivf-tvs-ov{align-self:stretch;text-align:left;margin:' + d(10) + ' 0 0;font-size:' + d(12) + ';line-height:' + d(16) + ';letter-spacing:' + d(0.4) + ';color:#d1d5db;',
       'overflow:hidden;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical}',
       // episode / cast text readable over bright parts of the picture (round-4 beta: Masters of the Air, TNG)
@@ -7037,7 +7083,7 @@ window.IvfWebLoaded = true;
       '.ivf-ep-progress div{height:100%;background:#d1d5db}',
       '.ivf-ep-title{letter-spacing:' + dd(0.1) + ';margin-top:' + dd(4) + ';font-size:' + dd(14) + ';font-weight:600;line-height:1.3;color:#d1d5db}',
       '.ivf-ep-meta{font-weight:400;letter-spacing:' + dd(0.4) + ';display:flex;flex-wrap:wrap;align-items:center;column-gap:' + dd(14) + ';row-gap:' + dd(2) + ';font-size:' + dd(12) + ';color:#d1d5db}',
-      '.ivf-ep-meta > span{white-space:nowrap}','.ivf-ep-overview + .ivf-ep-meta{margin-top:' + dd(4) + '}',
+      '.ivf-ep-meta > span{white-space:nowrap}','.ivf-ep-overview + .ivf-ep-meta{padding-top:' + dd(4) + '}' /* round 9: margin-top:auto keeps the line at the card bottom, level across the row (Android) */,
       '.ivf-ep-meta .material-icons{font-size:' + dd(14) + ';color:#f5c518; /* round 7: gold like the show rating (was Jellyfin blue) */ margin-right:' + dd(4) + ';vertical-align:middle}',
       '.ivf-ep-overview{font-weight:400;letter-spacing:' + dd(0.4) + ';font-size:' + dd(12) + ';line-height:' + dd(16) + ';color:#9ca3af;overflow-wrap:anywhere;padding-right:' + dd(4) + ';box-sizing:border-box}' /* round 5: lines ran past the card edge */,
       // Cast & Crew (film page's PersonCard: 108dp circle, name 14sp semi-bold, role 12sp, one line each)
@@ -7337,7 +7383,33 @@ window.IvfWebLoaded = true;
     if (s.ProductionYear) bits.push(String(s.ProductionYear));
     if (s.OfficialRating) bits.push(esc(s.OfficialRating));
     if (s.CommunityRating) bits.push(s.CommunityRating.toFixed(1) + '<span class="star">★</span>');
+    var rt = showCritic[s.Id];
+    if (rt != null) bits.push(rt + '%' + tomato(rt >= 60));
     return bits.join('<span class="dot">●</span>');
+  }
+  // Rotten Tomatoes critics score for a show (Jellyfin has none for series): asked from Seerr through
+  // Jellyfin Enhanced by the show's TMDB id, kept per show; the info line is redrawn when it arrives
+  var showCritic = {};
+  function loadCritic(st) {
+    var s = st.series, tmdb = s.ProviderIds && (s.ProviderIds.Tmdb || s.ProviderIds.tmdb);
+    if (!tmdb || s.Id in showCritic) return;
+    showCritic[s.Id] = null;
+    ApiClient.ajax({ type: 'GET', url: ApiClient.getUrl('/JellyfinEnhanced/jellyseerr/tv/' + tmdb + '/ratings'), dataType: 'json' }).then(function (r) {
+      var rt = r && (r.rt || r);
+      if (!rt || rt.criticsScore == null) return;
+      showCritic[s.Id] = rt.criticsScore;
+      var q = st.page && st.page.querySelector('.ivf-tvs-quick');
+      if (!q) return;
+      var era = q.querySelector('.ivf-tvs-era');
+      q.innerHTML = '';
+      if (era) q.appendChild(era);
+      q.insertAdjacentHTML('beforeend', quickLine(s));
+    }, function () {});
+  }
+  function tomato(fresh) {
+    return '<svg class="ivf-tvs-tomato" viewBox="0 0 24 24" aria-hidden="true">' + (fresh
+      ? '<circle cx="12" cy="13.5" r="9" fill="#fa320a"/><path d="M8 4.5l2.5 2L12 3.5l1.5 3L16 4.5l-1 3.5H9z" fill="#00912d"/>'
+      : '<path d="M12 2.5l2.2 4.8 5.3-1.6-2.4 5 4.4 3.1-5.3 1.1.6 5.4-4.8-2.6-4.8 2.6.6-5.4-5.3-1.1 4.4-3.1-2.4-5 5.3 1.6z" fill="#0ac55a"/>') + '</svg>';
   }
   function castHtml(series) {
     // one card per person: several roles (Lauren Tom x3 in Batman Beyond) are joined into one (beta round 6)
@@ -7458,6 +7530,7 @@ window.IvfWebLoaded = true;
       '</div><div class="ivf-tvs-swrows"></div>' + castHtml(series) + '</div></div>';
     var st = { id: series.Id.toLowerCase(), series: series, seasons: seasons, nextUp: nextUp, allEpisodes: dt.allEpisodes || [], page: wrap,
       panel: wrap.querySelector('.ivf-series'), scrollEl: wrap.querySelector('.ivf-tvs-scroll'), lastEpIdx: 0, rowIdx: {}, scroll: 0 };
+    loadCritic(st);
     var logo = wrap.querySelector('.ivf-logo img');
     if (logo) logo.onerror = function () { logo.parentNode.innerHTML = '<h1>' + esc(series.Name) + '</h1>'; };
     // Remember which episode / person was last selected (Back from the player / a person returns there)
@@ -8212,6 +8285,15 @@ window.IvfSwPlanets = {"version":"2026-11-19","credit":"Pictures: Wookieepedia (
       bar.querySelector('button').addEventListener('click', function () {
         setMode(mode() === 'timeline' ? 'release' : 'timeline');
         apply(TV ? page : (document.querySelector('.page.libraryPage:not(.hide)') || page));
+      });
+      // TV: Down from the button = the first poster (round-9 beta, LG: it went to the poster under the
+      // button, 4th along, after a re-sort that left no poster looking selected)
+      if (TV) bar.querySelector('button').addEventListener('keydown', function (e) {
+        if (e.key !== 'ArrowDown' && e.keyCode !== 40) return;
+        var g = apply._grid, first = g && g.querySelector('.card');
+        if (!first) return;
+        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+        first.focus();
       });
     }
     bar.querySelector('.ivf-swt-lbl').textContent = 'Order: ' + (tl ? 'Star Wars timeline' : 'Release date');
