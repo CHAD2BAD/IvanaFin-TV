@@ -8,6 +8,7 @@ Three rounds of testing on every client (Fire TV, Samsung, LG and Jellyfin web) 
 - The star rating is now the TMDB rating everywhere: Discover, Discover title pages, film pages and show pages all show the same number.
 - The Rotten Tomatoes score with the tomato symbol is shown next to it on Discover, on Discover title pages and on show pages (film pages already had it).
 - Discover's header now uses each title's up-to-date rating (it could differ from the title page before).
+- Discover shows the Rotten Tomatoes score at the same time as the rest of the line (it used to appear a moment later).
 
 ### Discover
 - A title marked "available" that is no longer in your library opens its Discover page instead of an error page (Fire TV).
