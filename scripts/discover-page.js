@@ -189,8 +189,9 @@
     };
     img.src = url;
   }
-  function showHero(item) {
+  function showHero(item, card) {
     var hero = root.querySelector('.ivf-dsc-hero');
+    if (card) prefetchNear(card);
     if (!hero || !item || heroFor === item) return;
     heroFor = item;
     hero.innerHTML = '<h2>' + esc(titleOf(item)) + '</h2>' +
@@ -198,10 +199,24 @@
       (item.overview ? '<div class="ivf-dsc-ov">' + esc(item.overview) + '</div>' : '');
     if (!TV) fitHero(hero);
     setBackdrop(item);
-    heroCritic(item, function () {
-      var sub = heroFor === item && hero.querySelector('.ivf-dsc-sub');
-      if (sub) sub.innerHTML = heroSub(item);
-    });
+    // the "year • 7.7★ • 94%🍅" line waits (up to 0.8 s) for the ratings so it appears whole - the %
+    // came a moment after the rest (they are usually ready: the neighbours are fetched ahead, below)
+    var sub = hero.querySelector('.ivf-dsc-sub'), key = typeOf(item) + item.id;
+    function redraw() { if (heroFor === item && sub.isConnected) { sub.innerHTML = heroSub(item); sub.style.visibility = ''; } }
+    if (!(critics[key] && critics[key].done)) {
+      sub.style.visibility = 'hidden';
+      setTimeout(function () { if (heroFor === item) sub.style.visibility = ''; }, 800);
+    }
+    fetchCritic(item, redraw);
+  }
+  // the titles either side of the selected card, so their ratings are ready when you move there
+  function prefetchNear(card) {
+    var n = card, p = card;
+    for (var i = 0; i < 3; i++) {
+      n = n && n.nextElementSibling; p = p && p.previousElementSibling;
+      if (n && n._item) fetchCritic(n._item);
+      if (p && p._item) fetchCritic(p._item);
+    }
   }
   // "year • 7.6★ • 83%🍅": TMDB rating + Rotten Tomatoes critics score (fetched once per title, kept)
   var critics = {};
@@ -215,23 +230,24 @@
     if (c.rt != null) bits.push(c.rt + '%' + tomato(c.rt >= 60));
     return bits.join('<span class="dot">•</span>');
   }
-  var criticTimer = null;
-  function heroCritic(item, done) {
-    var type = typeOf(item), key = type + item.id;
-    if (key in critics) return;
-    clearTimeout(criticTimer);
-    // only for the title the header settles on (moving along a row changes it every press)
-    criticTimer = setTimeout(function () {
-      if (heroFor !== item || key in critics) return;
-      var c = critics[key] = {};
-      get(type + '/' + item.id).then(function (m) {
-        if (m && m.voteAverage != null && m.voteAverage !== item.voteAverage) { c.va = m.voteAverage; done(); }
-      }, function () {});
-      get(type === 'movie' ? 'movie/' + item.id + '/ratingscombined' : 'tv/' + item.id + '/ratings').then(function (r) {
-        var rt = r && (r.rt || (r.criticsScore != null ? r : null));
-        if (rt && rt.criticsScore != null) { c.rt = rt.criticsScore; done(); }
-      }, function () {});
-    }, 400);
+  // both asked at once, once per title; [done] runs when both have answered (or failed)
+  function fetchCritic(item, done) {
+    var type = typeOf(item), key = type + item.id, c = critics[key];
+    if (c) {
+      if (done) { if (c.done) done(); else c.waiting.push(done); }
+      return;
+    }
+    c = critics[key] = { waiting: done ? [done] : [], left: 2 };
+    function one() { if (--c.left > 0) return; c.done = true; c.waiting.forEach(function (f) { f(); }); c.waiting = []; }
+    get(type + '/' + item.id).then(function (m) {
+      if (m && m.voteAverage != null) c.va = m.voteAverage;
+      one();
+    }, one);
+    get(type === 'movie' ? 'movie/' + item.id + '/ratingscombined' : 'tv/' + item.id + '/ratings').then(function (r) {
+      var rt = r && (r.rt || (r.criticsScore != null ? r : null));
+      if (rt && rt.criticsScore != null) c.rt = rt.criticsScore;
+      one();
+    }, one);
   }
   // Web: shrink the overview text (down to 70%) until title + overview fit in the header
   function fitHero(hero) {
@@ -273,6 +289,8 @@
         var strip = row.querySelector('.ivf-dsc-strip');
         strip.innerHTML = items.map(function (i) { return cardHtml(i, r.type); }).join('');
         attachItems(strip, items);
+        // the first titles of each row: their ratings are ready when the selection gets there
+        items.slice(0, 4).forEach(function (i) { fetchCritic(i); });
         if (ri === 0 && items[0] && tab === 0) showHero(items[0]);
       }, function () { row.querySelector('.ivf-dsc-strip').innerHTML = '<div class="ivf-dsc-msg">Couldn\'t load this row.</div>'; });
     });
@@ -415,10 +433,10 @@
       var c = e.target.closest('.ivf-dsc-card'); if (!c || !c._item) return;
       openItem(c);
     });
-    root.addEventListener('mouseover', function (e) { var c = e.target.closest('.ivf-dsc-card'); if (c && c._item && tab === 0 && !c.closest('.ivf-dd')) showHero(c._item); });
+    root.addEventListener('mouseover', function (e) { var c = e.target.closest('.ivf-dsc-card'); if (c && c._item && tab === 0 && !c.closest('.ivf-dd')) showHero(c._item, c); });
     root.addEventListener('focusin', function (e) {
       var c = e.target.closest('.ivf-dsc-card'); if (!c || c.closest('.ivf-dd')) return;
-      if (c._item && tab === 0) showHero(c._item);
+      if (c._item && tab === 0) showHero(c._item, c);
       var content = cache[tab]; if (content && content._near) content._near(c);
     });
   }
@@ -666,21 +684,26 @@
 
   function loadDetails(d, first) {
     var type = d.type, id = d.id;
+    // the Rotten Tomatoes score: asked at the same time as the page (usually already fetched for the
+    // Discover header), and the info line waits for it (up to 1 s) so it appears whole
+    if (first) fetchCritic({ id: id, mediaType: type }, function () {
+      var c = critics[type + id];
+      d.rating = c && c.rt != null ? { critic: c.rt } : null;
+      d.ratingDone = true;
+      var q = d.el.querySelector('.ivf-dd-quick');
+      if (q && d.data) { q.innerHTML = quickHtml(d); q.style.visibility = ''; }
+    });
     get(type + '/' + id).then(function (data) {
       if (details.indexOf(d) < 0) return;
       d.data = data;
       renderDetails(d, first);
+      if (first && !d.ratingDone) {
+        var q = d.el.querySelector('.ivf-dd-quick');
+        if (q) { q.style.visibility = 'hidden'; setTimeout(function () { q.style.visibility = ''; }, 1000); }
+      }
       checkCancel(d);
       if (first) startPolling(d);
       if (!first) return;
-      // ratings, then the rows, as they arrive
-      get(type === 'movie' ? 'movie/' + id + '/ratingscombined' : 'tv/' + id + '/ratings').then(function (r) {
-        var rt = r && (r.rt || (r.criticsScore != null || r.audienceScore != null ? r : null));
-        if (!rt) return;
-        d.rating = { critic: rt.criticsScore };
-        var q = d.el.querySelector('.ivf-dd-quick');
-        if (q) q.innerHTML = quickHtml(d);
-      }, function () {});
       ['similar', 'recommendations'].forEach(function (rel) {
         get(type + '/' + id + '/' + rel, { page: 1 }).then(function (res) {
           var items = ((res && res.results) || []).filter(function (i) { return i.posterPath; });
